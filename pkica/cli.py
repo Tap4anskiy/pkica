@@ -91,6 +91,20 @@ def command_init_root(args: argparse.Namespace) -> int:
     save_private_key(private_key, ROOT_KEY_PATH, password=password)
     save_certificate(cert, ROOT_CERT_PATH)
 
+    append_jsonl(
+        AUDIT_LOG_PATH,
+        {
+            "action": "ca.init_root",
+            "subject": args.subject,
+            "algorithm": args.algo,
+            "rsa_bits": args.rsa_bits,
+            "days": args.days,
+            "encrypted": args.encrypt,
+            "key_path": str(ROOT_KEY_PATH),
+            "cert_path": str(ROOT_CERT_PATH),
+        },
+    )
+
     print(f"Root CA key saved to:  {ROOT_KEY_PATH}")
     print(f"Root CA cert saved to: {ROOT_CERT_PATH}")
     return 0
@@ -138,6 +152,23 @@ def command_init_intermediate(args: argparse.Namespace) -> int:
     save_csr(intermediate_csr, INTERMEDIATE_CSR_PATH)
     save_certificate(intermediate_cert, INTERMEDIATE_CERT_PATH)
 
+    append_jsonl(
+        AUDIT_LOG_PATH,
+        {
+            "action": "ca.init_intermediate",
+            "subject": args.subject,
+            "algorithm": args.algo,
+            "rsa_bits": args.rsa_bits,
+            "days": args.days,
+            "pathlen": args.pathlen,
+            "encrypted": args.encrypt,
+            "root_key_encrypted": args.root_key_encrypted,
+            "key_path": str(INTERMEDIATE_KEY_PATH),
+            "csr_path": str(INTERMEDIATE_CSR_PATH),
+            "cert_path": str(INTERMEDIATE_CERT_PATH),
+        },
+    )
+
     print(f"Intermediate CA key saved to:  {INTERMEDIATE_KEY_PATH}")
     print(f"Intermediate CA CSR saved to:  {INTERMEDIATE_CSR_PATH}")
     print(f"Intermediate CA cert saved to: {INTERMEDIATE_CERT_PATH}")
@@ -162,6 +193,18 @@ def command_key_gen(args: argparse.Namespace) -> int:
 
     private_key = generate_private_key(args.algo, args.rsa_bits)
     save_private_key(private_key, output_path, password=password)
+
+    append_jsonl(
+        AUDIT_LOG_PATH,
+        {
+            "action": "key.gen",
+            "name": args.name,
+            "algorithm": args.algo,
+            "rsa_bits": args.rsa_bits,
+            "encrypted": args.encrypt,
+            "key_path": str(output_path),
+        },
+    )
 
     print(f"Private key saved to: {output_path}")
     return 0
@@ -196,6 +239,21 @@ def command_csr_gen(args: argparse.Namespace) -> int:
     )
 
     save_subject_csr(csr, output_path)
+
+    append_jsonl(
+        AUDIT_LOG_PATH,
+        {
+            "action": "csr.gen",
+            "name": args.name,
+            "key_path": str(key_path),
+            "csr_path": str(output_path),
+            "common_name": args.cn,
+            "organization": args.org,
+            "country": args.country,
+            "san_dns": args.san_dns,
+            "san_ip": args.san_ip,
+        },
+    )
 
     print(f"CSR saved to: {output_path}")
     return 0
@@ -617,12 +675,36 @@ def command_verify(args: argparse.Namespace) -> int:
         else:
             print("CRL:         not checked")
 
+        append_jsonl(
+            AUDIT_LOG_PATH,
+            {
+                "action": "verify",
+                "result": "success",
+                "cert_path": str(cert_path),
+                "crl_path": str(crl_path) if crl_path else None,
+                "serial_number": result["serial_number"],
+                "subject": result["subject"],
+                "issuer": result["issuer"],
+                "crl_checked": result["crl_checked"],
+            },
+        )
+
         return 0
 
     except Exception as exc:
         print("Certificate verification failed")
         print("-" * 60)
         print(f"Reason: {exc}")
+        append_jsonl(
+            AUDIT_LOG_PATH,
+            {
+                "action": "verify",
+                "result": "failed",
+                "cert_path": str(cert_path),
+                "crl_path": str(crl_path) if crl_path else None,
+                "reason": str(exc),
+            },
+        )
         return 1
 
 def command_reset(args: argparse.Namespace) -> int:
@@ -647,6 +729,15 @@ def command_reset(args: argparse.Namespace) -> int:
 
         # пересоздаём базовую структуру (чтобы не было пусто)
         ensure_ca_directories()
+
+        append_jsonl(
+            AUDIT_LOG_PATH,
+            {
+                "action": "reset",
+                "data_dir": str(base_dir),
+                "force": args.force,
+            },
+        )
 
         print("PKI environment reset successfully.")
         return 0
@@ -699,6 +790,19 @@ def command_status(args: argparse.Namespace) -> int:
     print(f"Issued DB:       {ISSUED_DB_PATH if ISSUED_DB_PATH.exists() else '-'}")
     print(f"Revoked DB:      {REVOKED_DB_PATH if REVOKED_DB_PATH.exists() else '-'}")
     print(f"CRL path:        {CRL_PATH if CRL_PATH.exists() else '-'}")
+
+    append_jsonl(
+        AUDIT_LOG_PATH,
+        {
+            "action": "status",
+            "root_ready": root_ready,
+            "intermediate_ready": intermediate_ready,
+            "crl_ready": crl_ready,
+            "requests_total": len(requests),
+            "certificates_total": len(issued),
+            "revocations_total": len(revoked),
+        },
+    )
 
     return 0
 
