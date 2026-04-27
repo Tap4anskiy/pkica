@@ -83,6 +83,8 @@ def command_init_root(args: argparse.Namespace) -> int:
         if password != confirm:
             print("Passwords do not match.")
             return 1
+    else:
+        print("Warning: Root CA private key will be stored without encryption.")
 
     subject = parse_subject(args.subject)
     private_key = generate_private_key(args.algo, args.rsa_bits)
@@ -133,6 +135,8 @@ def command_init_intermediate(args: argparse.Namespace) -> int:
         if intermediate_password != confirm:
             print("Passwords do not match.")
             return 1
+    else:
+        print("Warning: Intermediate CA private key will be stored without encryption.")
 
     root_key = load_private_key(ROOT_KEY_PATH, root_password)
     root_cert = load_certificate(ROOT_CERT_PATH)

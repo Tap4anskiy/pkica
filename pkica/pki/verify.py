@@ -57,18 +57,26 @@ def check_issuer_subject(cert: x509.Certificate, issuer_cert: x509.Certificate) 
         raise ValueError("Certificate issuer does not match issuer certificate subject")
 
 
-def get_basic_constraints(cert: x509.Certificate) -> x509.BasicConstraints:
+def get_basic_constraints_extension(cert: x509.Certificate) -> x509.Extension:
     try:
-        return cert.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS).value
+        return cert.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS)
     except x509.ExtensionNotFound as exc:
         raise ValueError("Certificate is missing BasicConstraints") from exc
 
 
-def get_key_usage(cert: x509.Certificate) -> x509.KeyUsage:
+def get_basic_constraints(cert: x509.Certificate) -> x509.BasicConstraints:
+    return get_basic_constraints_extension(cert).value
+
+
+def get_key_usage_extension(cert: x509.Certificate) -> x509.Extension:
     try:
-        return cert.extensions.get_extension_for_oid(ExtensionOID.KEY_USAGE).value
+        return cert.extensions.get_extension_for_oid(ExtensionOID.KEY_USAGE)
     except x509.ExtensionNotFound as exc:
         raise ValueError("Certificate is missing KeyUsage") from exc
+
+
+def get_key_usage(cert: x509.Certificate) -> x509.KeyUsage:
+    return get_key_usage_extension(cert).value
 
 
 def get_extended_key_usage(cert: x509.Certificate) -> x509.ExtendedKeyUsage:
@@ -79,11 +87,19 @@ def get_extended_key_usage(cert: x509.Certificate) -> x509.ExtendedKeyUsage:
 
 
 def check_ca_certificate(cert: x509.Certificate, name: str) -> None:
-    basic_constraints = get_basic_constraints(cert)
+    basic_constraints_extension = get_basic_constraints_extension(cert)
+    if not basic_constraints_extension.critical:
+        raise ValueError(f"{name} certificate BasicConstraints must be critical")
+
+    basic_constraints = basic_constraints_extension.value
     if not basic_constraints.ca:
         raise ValueError(f"{name} certificate must have CA:TRUE")
 
-    key_usage = get_key_usage(cert)
+    key_usage_extension = get_key_usage_extension(cert)
+    if not key_usage_extension.critical:
+        raise ValueError(f"{name} certificate KeyUsage must be critical")
+
+    key_usage = key_usage_extension.value
     if not key_usage.key_cert_sign:
         raise ValueError(f"{name} certificate must allow keyCertSign")
     if not key_usage.crl_sign:
@@ -91,11 +107,19 @@ def check_ca_certificate(cert: x509.Certificate, name: str) -> None:
 
 
 def check_end_entity_certificate(cert: x509.Certificate) -> None:
-    basic_constraints = get_basic_constraints(cert)
+    basic_constraints_extension = get_basic_constraints_extension(cert)
+    if not basic_constraints_extension.critical:
+        raise ValueError("End-entity certificate BasicConstraints must be critical")
+
+    basic_constraints = basic_constraints_extension.value
     if basic_constraints.ca:
         raise ValueError("End-entity certificate must have CA:FALSE")
 
-    key_usage = get_key_usage(cert)
+    key_usage_extension = get_key_usage_extension(cert)
+    if not key_usage_extension.critical:
+        raise ValueError("End-entity certificate KeyUsage must be critical")
+
+    key_usage = key_usage_extension.value
     if key_usage.key_cert_sign or key_usage.crl_sign:
         raise ValueError("End-entity certificate must not allow CA signing usages")
 
@@ -120,6 +144,9 @@ def check_path_length(root_cert: x509.Certificate, intermediate_cert: x509.Certi
 
 
 def check_leaf_within_issuer_validity(cert: x509.Certificate, issuer_cert: x509.Certificate) -> None:
+    if cert.not_valid_before_utc < issuer_cert.not_valid_before_utc:
+        raise ValueError("Certificate is valid before issuer certificate")
+
     if cert.not_valid_after_utc > issuer_cert.not_valid_after_utc:
         raise ValueError("Certificate outlives issuer certificate")
 

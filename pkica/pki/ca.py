@@ -1,29 +1,24 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.x509.oid import NameOID, ExtensionOID
+from cryptography.x509.oid import NameOID
 
 from pkica.pki.keys import PrivateKey
 from pkica.storage.secure import write_private_text
 
-import json
 
-
-
-"""Получение текущего времени по UTC"""
 def utcnow() -> datetime:
+    """Возвращает текущее время в UTC."""
     return datetime.now(timezone.utc)
 
-"""
-    Преобразует строку вида:
-    C=RU,O=My Org,CN=My CA,...
-    в объект x509.Name.
-"""
+
 def parse_subject(subject_str: str) -> x509.Name:
+    """Преобразует строку subject вида C=RU,O=Org,CN=CA в x509.Name."""
     # Словарь соответсвий
     oid_map = {
         "C": NameOID.COUNTRY_NAME,
@@ -59,18 +54,18 @@ def parse_subject(subject_str: str) -> x509.Name:
     return x509.Name(attributes)
 
 
-"""Сохраняет сертификат в PEM"""
 def save_certificate(cert: x509.Certificate, output_path: Path) -> None:
+    """Сохраняет сертификат в PEM."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
 
 
-"""Создаёт self-signed сертификат Root CA"""
 def create_root_ca_certificate(
     private_key: PrivateKey,
     subject: x509.Name,
     days: int,
 ) -> x509.Certificate:
+    """Создаёт self-signed сертификат Root CA."""
     now = utcnow()
 
     # Создание и заполнение шаблона сертификата
@@ -110,24 +105,23 @@ def create_root_ca_certificate(
     return builder.sign(private_key=private_key, algorithm=hashes.SHA256())
 
 
-"""Создаёт CSR для Intermediate CA"""
 def create_intermediate_csr(
     private_key: PrivateKey,
     subject: x509.Name,
 ) -> x509.CertificateSigningRequest:
+    """Создаёт CSR для Intermediate CA."""
     # Создание CSR для Int CA
     csr_builder = x509.CertificateSigningRequestBuilder().subject_name(subject)
     # Подпись CSR закрытым ключом Int CA и возврат
     return csr_builder.sign(private_key, hashes.SHA256())
 
 
-"""Сохраняет CSR в PEM"""
 def save_csr(csr: x509.CertificateSigningRequest, output_path: Path) -> None:
+    """Сохраняет CSR в PEM."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(csr.public_bytes(serialization.Encoding.PEM))
 
 
-"""Подписывает CSR промежуточного УЦ корневым ключом"""
 def create_intermediate_ca_certificate(
     root_private_key: PrivateKey,
     root_cert: x509.Certificate,
@@ -135,6 +129,7 @@ def create_intermediate_ca_certificate(
     days: int,
     pathlen: int,
 ) -> x509.Certificate:
+    """Подписывает CSR промежуточного УЦ корневым ключом."""
     now = utcnow()
     # Извлечение public key из CSR
     public_key = intermediate_csr.public_key()
@@ -186,10 +181,11 @@ def create_intermediate_ca_certificate(
     return builder.sign(private_key=root_private_key, algorithm=hashes.SHA256())
 
 
-"""Загружает PEM-сертификат"""
 def load_certificate(path: Path) -> x509.Certificate:
+    """Загружает PEM-сертификат."""
     data = path.read_bytes()
     return x509.load_pem_x509_certificate(data)
+
 
 def create_end_entity_certificate(
     intermediate_private_key: PrivateKey,

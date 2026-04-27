@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -215,6 +216,11 @@ def ca_cert(
     public_key: rsa.RSAPublicKey,
     issuer_key: rsa.RSAPrivateKey,
     ca: bool = True,
+    path_length: int | None = None,
+    basic_constraints_critical: bool = True,
+    key_usage_critical: bool = True,
+    not_valid_before: datetime | None = None,
+    not_valid_after: datetime | None = None,
 ) -> x509.Certificate:
     now = datetime.now(timezone.utc)
     return (
@@ -223,9 +229,12 @@ def ca_cert(
         .issuer_name(issuer)
         .public_key(public_key)
         .serial_number(x509.random_serial_number())
-        .not_valid_before(now - timedelta(minutes=5))
-        .not_valid_after(now + timedelta(days=30))
-        .add_extension(x509.BasicConstraints(ca=ca, path_length=0 if ca else None), critical=True)
+        .not_valid_before(not_valid_before or now - timedelta(minutes=5))
+        .not_valid_after(not_valid_after or now + timedelta(days=30))
+        .add_extension(
+            x509.BasicConstraints(ca=ca, path_length=path_length if ca else None),
+            critical=basic_constraints_critical,
+        )
         .add_extension(
             x509.KeyUsage(
                 digital_signature=False,
@@ -238,7 +247,7 @@ def ca_cert(
                 encipher_only=False,
                 decipher_only=False,
             ),
-            critical=True,
+            critical=key_usage_critical,
         )
         .sign(private_key=issuer_key, algorithm=hashes.SHA256())
     )
@@ -251,6 +260,10 @@ def leaf_cert(
     public_key: rsa.RSAPublicKey,
     issuer_key: rsa.RSAPrivateKey,
     eku_oid: x509.ObjectIdentifier = ExtendedKeyUsageOID.SERVER_AUTH,
+    basic_constraints_critical: bool = True,
+    key_usage_critical: bool = True,
+    not_valid_before: datetime | None = None,
+    not_valid_after: datetime | None = None,
 ) -> x509.Certificate:
     now = datetime.now(timezone.utc)
     return (
@@ -259,9 +272,12 @@ def leaf_cert(
         .issuer_name(issuer)
         .public_key(public_key)
         .serial_number(x509.random_serial_number())
-        .not_valid_before(now - timedelta(minutes=5))
-        .not_valid_after(now + timedelta(days=7))
-        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        .not_valid_before(not_valid_before or now - timedelta(minutes=5))
+        .not_valid_after(not_valid_after or now + timedelta(days=7))
+        .add_extension(
+            x509.BasicConstraints(ca=False, path_length=None),
+            critical=basic_constraints_critical,
+        )
         .add_extension(
             x509.KeyUsage(
                 digital_signature=True,
@@ -274,7 +290,7 @@ def leaf_cert(
                 encipher_only=False,
                 decipher_only=False,
             ),
-            critical=True,
+            critical=key_usage_critical,
         )
         .add_extension(x509.ExtendedKeyUsage([eku_oid]), critical=False)
         .sign(private_key=issuer_key, algorithm=hashes.SHA256())
@@ -581,6 +597,80 @@ def test_verify_rejects_intermediate_without_ca_true(tmp_path: Path) -> None:
         verify_certificate_chain(*paths)
 
 
+def test_verify_rejects_ca_with_non_critical_basic_constraints(tmp_path: Path) -> None:
+    root_key = private_key()
+    intermediate_key = private_key()
+    leaf_key = private_key()
+
+    root_subject = name("Root CA")
+    intermediate_subject = name("Intermediate CA")
+    root_cert = ca_cert(
+        subject=root_subject,
+        issuer=root_subject,
+        public_key=root_key.public_key(),
+        issuer_key=root_key,
+    )
+    intermediate_cert = ca_cert(
+        subject=intermediate_subject,
+        issuer=root_subject,
+        public_key=intermediate_key.public_key(),
+        issuer_key=root_key,
+        basic_constraints_critical=False,
+    )
+    leaf = leaf_cert(
+        subject=name("leaf"),
+        issuer=intermediate_subject,
+        public_key=leaf_key.public_key(),
+        issuer_key=intermediate_key,
+    )
+    paths = write_chain(
+        tmp_path,
+        root_cert=root_cert,
+        intermediate_cert=intermediate_cert,
+        leaf_cert=leaf,
+    )
+
+    with pytest.raises(ValueError, match="Intermediate certificate BasicConstraints must be critical"):
+        verify_certificate_chain(*paths)
+
+
+def test_verify_rejects_leaf_with_non_critical_key_usage(tmp_path: Path) -> None:
+    root_key = private_key()
+    intermediate_key = private_key()
+    leaf_key = private_key()
+
+    root_subject = name("Root CA")
+    intermediate_subject = name("Intermediate CA")
+    root_cert = ca_cert(
+        subject=root_subject,
+        issuer=root_subject,
+        public_key=root_key.public_key(),
+        issuer_key=root_key,
+    )
+    intermediate_cert = ca_cert(
+        subject=intermediate_subject,
+        issuer=root_subject,
+        public_key=intermediate_key.public_key(),
+        issuer_key=root_key,
+    )
+    leaf = leaf_cert(
+        subject=name("leaf"),
+        issuer=intermediate_subject,
+        public_key=leaf_key.public_key(),
+        issuer_key=intermediate_key,
+        key_usage_critical=False,
+    )
+    paths = write_chain(
+        tmp_path,
+        root_cert=root_cert,
+        intermediate_cert=intermediate_cert,
+        leaf_cert=leaf,
+    )
+
+    with pytest.raises(ValueError, match="End-entity certificate KeyUsage must be critical"):
+        verify_certificate_chain(*paths)
+
+
 def test_verify_rejects_leaf_with_wrong_eku(tmp_path: Path) -> None:
     root_key = private_key()
     intermediate_key = private_key()
@@ -615,6 +705,49 @@ def test_verify_rejects_leaf_with_wrong_eku(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ValueError, match="serverAuth or clientAuth"):
+        verify_certificate_chain(*paths)
+
+
+def test_verify_rejects_leaf_valid_before_intermediate_ca(tmp_path: Path) -> None:
+    root_key = private_key()
+    intermediate_key = private_key()
+    leaf_key = private_key()
+    now = datetime.now(timezone.utc)
+
+    root_subject = name("Root CA")
+    intermediate_subject = name("Intermediate CA")
+    root_cert = ca_cert(
+        subject=root_subject,
+        issuer=root_subject,
+        public_key=root_key.public_key(),
+        issuer_key=root_key,
+        not_valid_before=now - timedelta(days=10),
+        not_valid_after=now + timedelta(days=30),
+    )
+    intermediate_cert = ca_cert(
+        subject=intermediate_subject,
+        issuer=root_subject,
+        public_key=intermediate_key.public_key(),
+        issuer_key=root_key,
+        not_valid_before=now - timedelta(days=1),
+        not_valid_after=now + timedelta(days=20),
+    )
+    leaf = leaf_cert(
+        subject=name("leaf"),
+        issuer=intermediate_subject,
+        public_key=leaf_key.public_key(),
+        issuer_key=intermediate_key,
+        not_valid_before=now - timedelta(days=2),
+        not_valid_after=now + timedelta(days=7),
+    )
+    paths = write_chain(
+        tmp_path,
+        root_cert=root_cert,
+        intermediate_cert=intermediate_cert,
+        leaf_cert=leaf,
+    )
+
+    with pytest.raises(ValueError, match="Certificate is valid before issuer certificate"):
         verify_certificate_chain(*paths)
 
 
@@ -660,3 +793,61 @@ def test_verify_rejects_wrong_issuer_subject_chain(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Certificate issuer does not match"):
         verify_certificate_chain(*paths)
+
+
+def test_verify_rejects_matching_subject_chain_with_wrong_signature(tmp_path: Path) -> None:
+    root_key = private_key()
+    intermediate_key = private_key()
+    other_intermediate_key = private_key()
+    leaf_key = private_key()
+
+    root_subject = name("Root CA")
+    intermediate_subject = name("Intermediate CA")
+    root_cert = ca_cert(
+        subject=root_subject,
+        issuer=root_subject,
+        public_key=root_key.public_key(),
+        issuer_key=root_key,
+    )
+    intermediate_cert = ca_cert(
+        subject=intermediate_subject,
+        issuer=root_subject,
+        public_key=intermediate_key.public_key(),
+        issuer_key=root_key,
+    )
+    leaf = leaf_cert(
+        subject=name("leaf"),
+        issuer=intermediate_subject,
+        public_key=leaf_key.public_key(),
+        issuer_key=other_intermediate_key,
+    )
+    paths = write_chain(
+        tmp_path,
+        root_cert=root_cert,
+        intermediate_cert=intermediate_cert,
+        leaf_cert=leaf,
+    )
+
+    with pytest.raises(InvalidSignature):
+        verify_certificate_chain(*paths)
+
+
+def test_verify_reports_missing_ca_files(tmp_path: Path) -> None:
+    init_ca(tmp_path)
+    serial = issue_server_cert(tmp_path)
+    (tmp_path / "data/ca/intermediate/certs/intermediate.crt.pem").unlink()
+
+    output = assert_failure(run_pkica(tmp_path, "verify", "--cert", f"data/issued/{serial}.crt.pem"))
+    assert "Certificate verification failed" in output
+    assert "No such file or directory" in output
+
+
+def test_request_submit_rejects_malformed_csr(tmp_path: Path) -> None:
+    init_ca(tmp_path)
+    bad_csr = tmp_path / "bad.csr.pem"
+    bad_csr.write_text("not a valid csr", encoding="utf-8")
+
+    output = assert_failure(
+        run_pkica(tmp_path, "req", "submit", "--csr", "bad.csr.pem", "--profile", "server_tls")
+    )
+    assert "Error:" in output

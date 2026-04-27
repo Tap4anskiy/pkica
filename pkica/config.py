@@ -34,8 +34,8 @@ EXPORT_DIR = BASE_DIR / "export"
 TRUST_EXPORT_DIR = EXPORT_DIR / "trust"
 NGINX_EXPORT_DIR = EXPORT_DIR / "nginx"
 
-"""Функция проверки и создания рабочих директорий"""
 def ensure_ca_directories() -> None:
+    """Создаёт рабочие каталоги CA и выставляет приватные права доступа."""
     protected_dirs = [
         ROOT_DIR / "private",
         INTERMEDIATE_DIR / "private",
@@ -55,7 +55,7 @@ def ensure_ca_directories() -> None:
         CRL_DIR,
         EXPORT_DIR,
         TRUST_EXPORT_DIR,
-        NGINX_EXPORT_DIR
+        NGINX_EXPORT_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)
 
