@@ -1,0 +1,23 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Local PKI data: keys, certificates, CSRs, CRLs, registries, audit logs
+data/
+
+# Local editor and tool files
+.codex
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
