@@ -23,6 +23,8 @@ from pkica.config import (
     REQUESTS_DIR,
     CRL_PATH,
     REVOKED_DB_PATH,
+    NGINX_EXPORT_DIR,
+    TRUST_EXPORT_DIR,
     ensure_ca_directories,
 )
 from pkica.pki.ca import (
@@ -64,6 +66,7 @@ from pkica.pki.crl import REASON_MAP, create_crl, save_crl
 from pkica.storage.revocations import add_revocation, load_revocations
 from pkica.storage.status import count_by_status, load_json_list
 from pkica.pki.verify import verify_certificate_chain
+from pkica.storage.export import copy_file, write_chain
 
 """Создание корневого УЦ"""
 def command_init_root(args: argparse.Namespace) -> int:
@@ -699,6 +702,112 @@ def command_status(args: argparse.Namespace) -> int:
 
     return 0
 
+def command_export_trust(args: argparse.Namespace) -> int:
+    ensure_ca_directories()
+
+    try:
+        root_out = TRUST_EXPORT_DIR / "root.crt.pem"
+        intermediate_out = TRUST_EXPORT_DIR / "intermediate.crt.pem"
+        chain_out = TRUST_EXPORT_DIR / "ca-chain.pem"
+
+        copy_file(ROOT_CERT_PATH, root_out)
+        copy_file(INTERMEDIATE_CERT_PATH, intermediate_out)
+        write_chain([INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH], chain_out)
+
+        append_jsonl(
+            AUDIT_LOG_PATH,
+            {
+                "action": "export.trust",
+                "output_dir": str(TRUST_EXPORT_DIR),
+            },
+        )
+
+        print("Trust certificates exported successfully.")
+        print(f"Root CA:         {root_out}")
+        print(f"Intermediate CA: {intermediate_out}")
+        print(f"CA chain:        {chain_out}")
+        return 0
+
+    except Exception as exc:
+        print(f"Error: {exc}")
+        return 1
+
+def command_export_nginx(args: argparse.Namespace) -> int:
+    ensure_ca_directories()
+
+    try:
+        record = find_issued_record_by_serial(
+            db_path=ISSUED_DB_PATH,
+            serial_number=args.serial,
+        )
+
+        if record.get("status") != "issued":
+            print(f"Certificate is not active. Current status: {record.get('status')}")
+            return 1
+
+        if record.get("profile") != "server_tls":
+            print(f"Certificate profile must be server_tls. Current profile: {record.get('profile')}")
+            return 1
+
+        serial = record["serial_number"]
+        cert_path = Path(record["cert_path"])
+        fullchain_path = Path(record["fullchain_path"])
+
+        export_dir = NGINX_EXPORT_DIR / serial
+
+        cert_out = export_dir / "server.crt.pem"
+        fullchain_out = export_dir / "server.fullchain.pem"
+        root_out = export_dir / "ca-root.crt.pem"
+        intermediate_out = export_dir / "ca-intermediate.crt.pem"
+        readme_out = export_dir / "README.txt"
+
+        copy_file(cert_path, cert_out)
+        copy_file(fullchain_path, fullchain_out)
+        copy_file(ROOT_CERT_PATH, root_out)
+        copy_file(INTERMEDIATE_CERT_PATH, intermediate_out)
+
+        readme_out.write_text(
+            (
+                "Nginx export files\n"
+                "==================\n\n"
+                "Use these files in a TLS server configuration.\n\n"
+                f"Certificate:     {cert_out}\n"
+                f"Full chain:      {fullchain_out}\n"
+                f"Root CA:         {root_out}\n"
+                f"Intermediate CA: {intermediate_out}\n\n"
+                "Example Nginx directives:\n\n"
+                f"ssl_certificate     {fullchain_out};\n"
+                "ssl_certificate_key /path/to/server.key.pem;\n\n"
+                "Note: the private key is not exported automatically. "
+                "Use the key that was generated for the CSR.\n"
+            ),
+            encoding="utf-8",
+        )
+
+        append_jsonl(
+            AUDIT_LOG_PATH,
+            {
+                "action": "export.nginx",
+                "serial_number": serial,
+                "output_dir": str(export_dir),
+            },
+        )
+
+        print("Nginx files exported successfully.")
+        print(f"Export dir:   {export_dir}")
+        print(f"Certificate:  {cert_out}")
+        print(f"Full chain:   {fullchain_out}")
+        print(f"Root CA:      {root_out}")
+        print(f"README:       {readme_out}")
+        print()
+        print("Private key is not copied automatically.")
+        print("Use the subject key that was used to generate the CSR.")
+        return 0
+
+    except Exception as exc:
+        print(f"Error: {exc}")
+        return 1
+
 # Описание CLI
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pkica")
@@ -867,6 +976,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="Show PKI environment status")
     status_parser.set_defaults(func=command_status)
+
+    export_parser = subparsers.add_parser("export", help="Export certificates for integration")
+    export_subparsers = export_parser.add_subparsers(dest="export_command")
+
+    export_trust = export_subparsers.add_parser("trust", help="Export Root and Intermediate CA certificates")
+    export_trust.set_defaults(func=command_export_trust)
+
+    export_nginx = export_subparsers.add_parser("nginx", help="Export server certificate files for Nginx")
+    export_nginx.add_argument("--serial", required=True, help="Server certificate serial number")
+    export_nginx.set_defaults(func=command_export_nginx)
 
     return parser
 

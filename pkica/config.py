@@ -28,6 +28,10 @@ CRL_DIR = BASE_DIR / "crl"
 CRL_PATH = CRL_DIR / "intermediate.crl.pem"
 REVOKED_DB_PATH = DB_DIR / "revoked.json"
 
+EXPORT_DIR = BASE_DIR / "export"
+TRUST_EXPORT_DIR = EXPORT_DIR / "trust"
+NGINX_EXPORT_DIR = EXPORT_DIR / "nginx"
+
 """Функция проверки и создания рабочих директорий"""
 def ensure_ca_directories() -> None:
     for path in [
@@ -42,7 +46,11 @@ def ensure_ca_directories() -> None:
         ISSUED_DIR,
         DB_DIR,
         BASE_DIR / "audit",
-        CRL_DIR
+        CRL_DIR,
+        EXPORT_DIR,
+        TRUST_EXPORT_DIR,
+        NGINX_EXPORT_DIR
+        
     ]:
         path.mkdir(parents=True, exist_ok=True)
         
