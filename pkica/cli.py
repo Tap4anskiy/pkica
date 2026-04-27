@@ -32,6 +32,7 @@ from pkica.pki.ca import (
     create_intermediate_ca_certificate,
     create_intermediate_csr,
     create_root_ca_certificate,
+    load_issued_records,
     load_certificate,
     parse_subject,
     save_certificate,
@@ -786,6 +787,19 @@ def build_parser() -> argparse.ArgumentParser:
     cert_show.add_argument("--req-id", type=int, help="Request ID")
     cert_show.set_defaults(func=command_cert_show)
 
+    cert_list = cert_subparsers.add_parser("list", help="List issued certificates")
+    cert_list.add_argument(
+        "--status",
+        choices=["issued", "revoked"],
+        help="Filter certificates by status",
+    )
+    cert_list.add_argument(
+        "--profile",
+        choices=["server_tls", "client_tls"],
+        help="Filter certificates by profile",
+    )
+    cert_list.set_defaults(func=command_cert_list)
+
     cert_revoke = cert_subparsers.add_parser("revoke", help="Revoke certificate")
     cert_revoke.add_argument("--serial", required=True, help="Certificate serial number")
     cert_revoke.add_argument(
@@ -856,6 +870,44 @@ def build_parser() -> argparse.ArgumentParser:
 
     return parser
 
+def command_cert_list(args: argparse.Namespace) -> int:
+    records = load_issued_records(ISSUED_DB_PATH)
+
+    if args.status:
+        records = [
+            record for record in records
+            if record.get("status") == args.status
+        ]
+
+    if args.profile:
+        records = [
+            record for record in records
+            if record.get("profile") == args.profile
+        ]
+
+    if not records:
+        print("No certificates found.")
+        return 0
+
+    print(f"{'SERIAL':<42} {'STATUS':<10} {'PROFILE':<12} {'REQ-ID':<8} {'SUBJECT'}")
+    print("-" * 110)
+
+    for record in records:
+        serial = record.get("serial_number", "-")
+        status = record.get("status", "-")
+        profile = record.get("profile", "-")
+        request_id = record.get("request_id", "-")
+        subject = record.get("subject", "-")
+
+        print(
+            f"{serial:<42} "
+            f"{status:<10} "
+            f"{profile:<12} "
+            f"{str(request_id):<8} "
+            f"{subject}"
+        )
+
+    return 0
 
 def main() -> int:
     parser = build_parser()
