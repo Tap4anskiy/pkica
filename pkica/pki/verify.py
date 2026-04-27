@@ -6,7 +6,7 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
-from cryptography.x509.oid import ExtensionOID
+from cryptography.x509.oid import ExtendedKeyUsageOID, ExtensionOID
 
 from pkica.pki.ca import load_certificate
 
@@ -71,6 +71,13 @@ def get_key_usage(cert: x509.Certificate) -> x509.KeyUsage:
         raise ValueError("Certificate is missing KeyUsage") from exc
 
 
+def get_extended_key_usage(cert: x509.Certificate) -> x509.ExtendedKeyUsage:
+    try:
+        return cert.extensions.get_extension_for_oid(ExtensionOID.EXTENDED_KEY_USAGE).value
+    except x509.ExtensionNotFound as exc:
+        raise ValueError("End-entity certificate is missing ExtendedKeyUsage") from exc
+
+
 def check_ca_certificate(cert: x509.Certificate, name: str) -> None:
     basic_constraints = get_basic_constraints(cert)
     if not basic_constraints.ca:
@@ -91,6 +98,14 @@ def check_end_entity_certificate(cert: x509.Certificate) -> None:
     key_usage = get_key_usage(cert)
     if key_usage.key_cert_sign or key_usage.crl_sign:
         raise ValueError("End-entity certificate must not allow CA signing usages")
+
+    eku = get_extended_key_usage(cert)
+    allowed_eku = {
+        ExtendedKeyUsageOID.SERVER_AUTH,
+        ExtendedKeyUsageOID.CLIENT_AUTH,
+    }
+    if not any(oid in eku for oid in allowed_eku):
+        raise ValueError("End-entity certificate must allow serverAuth or clientAuth")
 
 
 def check_path_length(root_cert: x509.Certificate, intermediate_cert: x509.Certificate) -> None:
