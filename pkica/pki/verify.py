@@ -6,6 +6,7 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from cryptography.x509.oid import ExtensionOID
 
 from pkica.pki.ca import load_certificate
 
@@ -51,6 +52,63 @@ def check_validity_period(cert: x509.Certificate) -> None:
         raise ValueError("Certificate has expired")
 
 
+def check_issuer_subject(cert: x509.Certificate, issuer_cert: x509.Certificate) -> None:
+    if cert.issuer != issuer_cert.subject:
+        raise ValueError("Certificate issuer does not match issuer certificate subject")
+
+
+def get_basic_constraints(cert: x509.Certificate) -> x509.BasicConstraints:
+    try:
+        return cert.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS).value
+    except x509.ExtensionNotFound as exc:
+        raise ValueError("Certificate is missing BasicConstraints") from exc
+
+
+def get_key_usage(cert: x509.Certificate) -> x509.KeyUsage:
+    try:
+        return cert.extensions.get_extension_for_oid(ExtensionOID.KEY_USAGE).value
+    except x509.ExtensionNotFound as exc:
+        raise ValueError("Certificate is missing KeyUsage") from exc
+
+
+def check_ca_certificate(cert: x509.Certificate, name: str) -> None:
+    basic_constraints = get_basic_constraints(cert)
+    if not basic_constraints.ca:
+        raise ValueError(f"{name} certificate must have CA:TRUE")
+
+    key_usage = get_key_usage(cert)
+    if not key_usage.key_cert_sign:
+        raise ValueError(f"{name} certificate must allow keyCertSign")
+    if not key_usage.crl_sign:
+        raise ValueError(f"{name} certificate must allow cRLSign")
+
+
+def check_end_entity_certificate(cert: x509.Certificate) -> None:
+    basic_constraints = get_basic_constraints(cert)
+    if basic_constraints.ca:
+        raise ValueError("End-entity certificate must have CA:FALSE")
+
+    key_usage = get_key_usage(cert)
+    if key_usage.key_cert_sign or key_usage.crl_sign:
+        raise ValueError("End-entity certificate must not allow CA signing usages")
+
+
+def check_path_length(root_cert: x509.Certificate, intermediate_cert: x509.Certificate) -> None:
+    root_bc = get_basic_constraints(root_cert)
+    intermediate_bc = get_basic_constraints(intermediate_cert)
+
+    if root_bc.path_length is not None and root_bc.path_length < 1:
+        raise ValueError("Root certificate path length does not allow an intermediate CA")
+
+    if intermediate_bc.path_length is not None and intermediate_bc.path_length < 0:
+        raise ValueError("Intermediate certificate path length is invalid")
+
+
+def check_leaf_within_issuer_validity(cert: x509.Certificate, issuer_cert: x509.Certificate) -> None:
+    if cert.not_valid_after_utc > issuer_cert.not_valid_after_utc:
+        raise ValueError("Certificate outlives issuer certificate")
+
+
 def check_crl_signature(
     crl: x509.CertificateRevocationList,
     issuer_cert: x509.Certificate,
@@ -86,6 +144,19 @@ def check_certificate_not_revoked(
             raise ValueError("Certificate is revoked")
 
 
+def check_crl_metadata(crl: x509.CertificateRevocationList, issuer_cert: x509.Certificate) -> None:
+    now = datetime.now(timezone.utc)
+
+    if crl.issuer != issuer_cert.subject:
+        raise ValueError("CRL issuer does not match intermediate certificate subject")
+
+    if now < crl.last_update_utc:
+        raise ValueError("CRL is not valid yet")
+
+    if now > crl.next_update_utc:
+        raise ValueError("CRL has expired")
+
+
 def verify_certificate_chain(
     cert_path: Path,
     intermediate_cert_path: Path,
@@ -99,6 +170,16 @@ def verify_certificate_chain(
     check_validity_period(cert)
     check_validity_period(intermediate_cert)
     check_validity_period(root_cert)
+
+    check_issuer_subject(cert, intermediate_cert)
+    check_issuer_subject(intermediate_cert, root_cert)
+    check_issuer_subject(root_cert, root_cert)
+
+    check_ca_certificate(root_cert, "Root")
+    check_ca_certificate(intermediate_cert, "Intermediate")
+    check_end_entity_certificate(cert)
+    check_path_length(root_cert, intermediate_cert)
+    check_leaf_within_issuer_validity(cert, intermediate_cert)
 
     verify_signature(cert, intermediate_cert)
     verify_signature(intermediate_cert, root_cert)
@@ -115,6 +196,7 @@ def verify_certificate_chain(
 
     if crl_path is not None:
         crl = load_crl(crl_path)
+        check_crl_metadata(crl, intermediate_cert)
         check_crl_signature(crl, intermediate_cert)
         check_certificate_not_revoked(cert, crl)
 

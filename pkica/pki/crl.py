@@ -34,12 +34,16 @@ def create_crl(
     days: int = 7,
 ) -> x509.CertificateRevocationList:
     now = datetime.now(timezone.utc)
+    next_update = now + timedelta(days=days)
+
+    if next_update > issuer_cert.not_valid_after_utc:
+        raise ValueError("CRL cannot outlive the issuer certificate")
 
     builder = (
         x509.CertificateRevocationListBuilder()
         .issuer_name(issuer_cert.subject)
         .last_update(now)
-        .next_update(now + timedelta(days=days))
+        .next_update(next_update)
     )
 
     builder = builder.add_extension(

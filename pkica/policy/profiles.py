@@ -20,6 +20,8 @@ def validate_csr_for_profile(csr: x509.CertificateSigningRequest, profile: str) 
         san = get_subject_alt_name(csr)
         if san is None:
             raise ValueError("server_tls profile requires Subject Alternative Name")
+        if not san.get_values_for_type(x509.DNSName) and not san.get_values_for_type(x509.IPAddress):
+            raise ValueError("server_tls profile requires at least one DNS or IP SAN")
 
     elif profile == "client_tls":
         return

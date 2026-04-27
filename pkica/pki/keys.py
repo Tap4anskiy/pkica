@@ -6,6 +6,8 @@ from typing import Literal
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
+from pkica.storage.secure import write_private_bytes
+
 # Псевдотипы
 PrivateKey = rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey
 KeyAlgorithm = Literal["rsa", "ecdsa"]
@@ -46,8 +48,7 @@ def save_private_key(
     )
 
     # Запись в файл
-    output_path.write_bytes(pem)
-    output_path.chmod(0o600)
+    write_private_bytes(output_path, pem)
 
 
 """Загружает закрытый ключ из PEM"""

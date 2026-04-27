@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from pkica.storage.secure import ensure_private_dir
+
 BASE_DIR = Path("data")
 
 ROOT_DIR = BASE_DIR / "ca" / "root"
@@ -58,4 +60,4 @@ def ensure_ca_directories() -> None:
         path.mkdir(parents=True, exist_ok=True)
 
     for path in protected_dirs:
-        path.chmod(0o700)
+        ensure_private_dir(path)

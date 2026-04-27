@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pkica.storage.secure import write_private_text
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -17,12 +19,10 @@ def load_revocations(db_path: Path) -> list[dict]:
 
 
 def save_revocations(db_path: Path, records: list[dict]) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    db_path.write_text(
+    write_private_text(
+        db_path,
         json.dumps(records, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
-    db_path.chmod(0o600)
 
 
 def is_revoked(db_path: Path, serial_number: str) -> bool:

@@ -3,11 +3,15 @@ set -euo pipefail
 
 echo "=== PKICA full flow test ==="
 
-ROOT_PASS="rootpass"
-INTER_PASS="interpass"
-SERVER1_PASS="server1pass"
-SERVER2_PASS="server2pass"
-CLIENT_PASS="clientpass"
+random_password() {
+  python3 -c 'import secrets; print(secrets.token_urlsafe(24))'
+}
+
+ROOT_PASS="${ROOT_PASS:-$(random_password)}"
+INTER_PASS="${INTER_PASS:-$(random_password)}"
+SERVER1_PASS="${SERVER1_PASS:-$(random_password)}"
+SERVER2_PASS="${SERVER2_PASS:-$(random_password)}"
+CLIENT_PASS="${CLIENT_PASS:-$(random_password)}"
 
 echo
 echo "[1/23] Check pkica command"
@@ -232,8 +236,7 @@ $INTER_PASS
 EOF
 
 pkica verify \
-  --cert "data/issued/${SERVER2_SERIAL}.crt.pem" \
-  --crl data/crl/intermediate.crl.pem
+  --cert "data/issued/${SERVER2_SERIAL}.crt.pem"
 
 pkica cert revoke \
   --serial "$SERVER1_SERIAL" \
@@ -246,8 +249,7 @@ $INTER_PASS
 EOF
 
 if pkica verify \
-  --cert "data/issued/${SERVER1_SERIAL}.crt.pem" \
-  --crl data/crl/intermediate.crl.pem; then
+  --cert "data/issued/${SERVER1_SERIAL}.crt.pem"; then
   echo "ERROR: revoked server-01 certificate passed verification"
   exit 1
 else
@@ -256,11 +258,9 @@ fi
 
 pkica verify \
   --cert "data/issued/${SERVER2_SERIAL}.crt.pem" \
-  --crl data/crl/intermediate.crl.pem
 
 pkica verify \
   --cert "data/issued/${CLIENT_SERIAL}.crt.pem" \
-  --crl data/crl/intermediate.crl.pem
 
 echo
 echo "=== Final status ==="

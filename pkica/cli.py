@@ -649,7 +649,18 @@ def command_verify(args: argparse.Namespace) -> int:
         print(f"Certificate not found: {cert_path}")
         return 1
 
-    crl_path = Path(args.crl) if args.crl else None
+    if args.crl and args.no_crl:
+        print("Use either --crl or --no-crl, not both.")
+        return 1
+
+    crl_path = None
+    if args.no_crl:
+        crl_path = None
+    elif args.crl:
+        crl_path = Path(args.crl)
+    elif CRL_PATH.exists():
+        crl_path = CRL_PATH
+
     if crl_path is not None and not crl_path.exists():
         print(f"CRL not found: {crl_path}")
         return 1
@@ -674,6 +685,7 @@ def command_verify(args: argparse.Namespace) -> int:
             print("Revocation:  not revoked")
         else:
             print("CRL:         not checked")
+            print("Warning:     revocation status was not checked")
 
         append_jsonl(
             AUDIT_LOG_PATH,
@@ -1068,6 +1080,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser = subparsers.add_parser("verify", help="Verify certificate chain and revocation status")
     verify_parser.add_argument("--cert", required=True, help="Certificate path")
     verify_parser.add_argument("--crl", help="CRL path")
+    verify_parser.add_argument("--no-crl", action="store_true", help="Do not check certificate revocation")
     verify_parser.set_defaults(func=command_verify)
 
     reset_parser = subparsers.add_parser("reset", help="Reset all PKI data (DANGEROUS)")

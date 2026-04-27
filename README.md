@@ -337,11 +337,25 @@ pkica verify \
 ```text
 Chain:       valid
 CRL:         not checked
+Warning:     revocation status was not checked
 ```
 
 ### 9.2. Проверка с учётом CRL
 
-После публикации CRL можно проверить, не отозван ли сертификат:
+После публикации CRL команда `verify` автоматически использует файл:
+
+```text
+data/crl/intermediate.crl.pem
+```
+
+Поэтому обычно достаточно выполнить:
+
+```bash
+pkica verify \
+  --cert data/issued/<serial>.crt.pem
+```
+
+Можно явно указать другой CRL:
 
 ```bash
 pkica verify \
@@ -355,6 +369,14 @@ pkica verify \
 Chain:       valid
 CRL:         checked
 Revocation:  not revoked
+```
+
+Если нужно отключить проверку отзыва, используйте явный флаг:
+
+```bash
+pkica verify \
+  --cert data/issued/<serial>.crt.pem \
+  --no-crl
 ```
 
 ## 10. Отзыв сертификата
@@ -419,8 +441,7 @@ openssl crl -in data/crl/intermediate.crl.pem -text -noout
 
 ```bash
 pkica verify \
-  --cert data/issued/<serial>.crt.pem \
-  --crl data/crl/intermediate.crl.pem
+  --cert data/issued/<serial>.crt.pem
 ```
 
 Ожидаемый результат:
@@ -529,10 +550,17 @@ pkica crl publish \
   --intermediate-key-encrypted
 
 pkica verify \
-  --cert data/issued/<serial>.crt.pem \
-  --crl data/crl/intermediate.crl.pem
+  --cert data/issued/<serial>.crt.pem
 
 pkica status
 ```
 
 Где `<serial>` нужно заменить на серийный номер, который программа выведет после команды `cert issue`.
+
+## 13. Замечания по безопасности
+
+- Для Root CA и Intermediate CA используйте `--encrypt`; незашифрованные ключи допустимы только для тестов.
+- Не используйте пароли из `scripts/test_full_flow.sh` вне демонстрационной среды.
+- Сертификат конечного субъекта не может быть выпущен на срок дольше сертификата Intermediate CA.
+- Каталоги с приватными ключами, JSON-реестрами и аудитом создаются с правами `700`.
+- Файлы `*.key.pem`, `*.json` и `data/audit/audit.log` сохраняются с правами `600`.

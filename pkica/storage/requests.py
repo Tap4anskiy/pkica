@@ -9,6 +9,7 @@ from cryptography import x509
 from cryptography.x509.oid import ExtensionOID, NameOID
 
 from pkica.pki.csr import load_csr
+from pkica.storage.secure import write_private_text
 
 
 def now_iso() -> str:
@@ -23,12 +24,10 @@ def load_requests(db_path: Path) -> list[dict]:
 
 
 def save_requests(db_path: Path, records: list[dict]) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    db_path.write_text(
+    write_private_text(
+        db_path,
         json.dumps(records, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
-    db_path.chmod(0o600)
 
 
 def next_request_id(records: list[dict]) -> int:

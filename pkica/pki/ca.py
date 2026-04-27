@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509.oid import NameOID, ExtensionOID
 
 from pkica.pki.keys import PrivateKey
+from pkica.storage.secure import write_private_text
 
 import json
 
@@ -199,6 +200,10 @@ def create_end_entity_certificate(
 ) -> x509.Certificate:
     """Выпускает конечный сертификат по CSR."""
     now = utcnow()
+    not_after = now + timedelta(days=days)
+
+    if not_after > intermediate_cert.not_valid_after_utc:
+        raise ValueError("End-entity certificate cannot outlive the intermediate certificate")
 
     builder = (
         x509.CertificateBuilder()
@@ -207,7 +212,7 @@ def create_end_entity_certificate(
         .public_key(csr.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - timedelta(minutes=5))
-        .not_valid_after(now + timedelta(days=days))
+        .not_valid_after(not_after)
     )
 
     for extension, critical in extensions:
@@ -256,11 +261,10 @@ def append_issued_record(db_path: Path, record: dict) -> None:
         records = []
 
     records.append(record)
-    db_path.write_text(
+    write_private_text(
+        db_path,
         json.dumps(records, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
-    db_path.chmod(0o600)
 
 
 def save_fullchain(
@@ -313,11 +317,10 @@ def find_issued_record_by_request_id(db_path: Path, request_id: int) -> dict:
 def save_issued_records(db_path: Path, records: list[dict]) -> None:
     """Сохраняет реестр выданных сертификатов."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    db_path.write_text(
+    write_private_text(
+        db_path,
         json.dumps(records, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
-    db_path.chmod(0o600)
 
 
 def mark_issued_record_revoked(

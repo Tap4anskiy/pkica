@@ -4,16 +4,13 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pkica.storage.secure import append_private_text
+
 
 def append_jsonl(path: Path, event: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-
     event = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         **event,
     }
 
-    with path.open("a", encoding="utf-8") as file:
-        file.write(json.dumps(event, ensure_ascii=False) + "\n")
-
-    path.chmod(0o600)
+    append_private_text(path, json.dumps(event, ensure_ascii=False) + "\n")
