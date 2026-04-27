@@ -47,6 +47,7 @@ def save_private_key(
 
     # Запись в файл
     output_path.write_bytes(pem)
+    output_path.chmod(0o600)
 
 
 """Загружает закрытый ключ из PEM"""
