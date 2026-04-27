@@ -28,6 +28,7 @@ def save_requests(db_path: Path, records: list[dict]) -> None:
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    db_path.chmod(0o600)
 
 
 def next_request_id(records: list[dict]) -> int:

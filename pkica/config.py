@@ -34,23 +34,28 @@ NGINX_EXPORT_DIR = EXPORT_DIR / "nginx"
 
 """Функция проверки и создания рабочих директорий"""
 def ensure_ca_directories() -> None:
-    for path in [
+    protected_dirs = [
         ROOT_DIR / "private",
-        ROOT_DIR / "certs",
         INTERMEDIATE_DIR / "private",
+        USER_KEYS_DIR,
+        DB_DIR,
+        BASE_DIR / "audit",
+    ]
+
+    for path in [
+        *protected_dirs,
+        ROOT_DIR / "certs",
         INTERMEDIATE_DIR / "csr",
         INTERMEDIATE_DIR / "certs",
-        USER_KEYS_DIR,
         USER_CSR_DIR,
         REQUESTS_DIR,
         ISSUED_DIR,
-        DB_DIR,
-        BASE_DIR / "audit",
         CRL_DIR,
         EXPORT_DIR,
         TRUST_EXPORT_DIR,
         NGINX_EXPORT_DIR
-        
     ]:
         path.mkdir(parents=True, exist_ok=True)
-        
+
+    for path in protected_dirs:
+        path.chmod(0o700)

@@ -22,6 +22,7 @@ def save_revocations(db_path: Path, records: list[dict]) -> None:
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    db_path.chmod(0o600)
 
 
 def is_revoked(db_path: Path, serial_number: str) -> bool:

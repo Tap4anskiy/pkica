@@ -15,3 +15,5 @@ def append_jsonl(path: Path, event: dict) -> None:
 
     with path.open("a", encoding="utf-8") as file:
         file.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+    path.chmod(0o600)

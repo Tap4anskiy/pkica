@@ -260,6 +260,7 @@ def append_issued_record(db_path: Path, record: dict) -> None:
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    db_path.chmod(0o600)
 
 
 def save_fullchain(
@@ -316,6 +317,7 @@ def save_issued_records(db_path: Path, records: list[dict]) -> None:
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    db_path.chmod(0o600)
 
 
 def mark_issued_record_revoked(
