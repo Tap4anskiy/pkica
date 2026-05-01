@@ -388,9 +388,54 @@ pkica verify \
 
 Во время проверки дополнительно контролируются подписи цепочки, сроки действия, соответствие issuer/subject, `BasicConstraints`, `KeyUsage`, CA-роли Root/Intermediate, срок конечного сертификата относительно Intermediate CA, срок и issuer CRL.
 
-## 10. Отзыв сертификата
+## 10. Экспорт сертификатов
 
-### 10.1. Отзыв по серийному номеру
+Команда `export` готовит файлы для использования сертификатов во внешних системах. Экспорт записывается в аудит.
+
+### 10.1. Экспорт доверенных сертификатов УЦ
+
+```bash
+pkica export trust
+```
+
+После выполнения будут созданы:
+
+```text
+data/export/trust/root.crt.pem
+data/export/trust/intermediate.crt.pem
+data/export/trust/ca-chain.pem
+```
+
+Файл `ca-chain.pem` содержит цепочку Intermediate CA и Root CA.
+
+### 10.2. Экспорт серверного сертификата для Nginx
+
+Для Nginx можно экспортировать только активный сертификат с профилем `server_tls`.
+
+```bash
+pkica export nginx --serial <serial>
+```
+
+После выполнения будут созданы:
+
+```text
+data/export/nginx/<serial>/server.crt.pem
+data/export/nginx/<serial>/server.fullchain.pem
+data/export/nginx/<serial>/ca-root.crt.pem
+data/export/nginx/<serial>/ca-intermediate.crt.pem
+data/export/nginx/<serial>/README.txt
+```
+
+Приватный ключ автоматически не копируется. В конфигурации Nginx используйте ключ, который был создан для CSR:
+
+```nginx
+ssl_certificate     data/export/nginx/<serial>/server.fullchain.pem;
+ssl_certificate_key /path/to/server.key.pem;
+```
+
+## 11. Отзыв сертификата
+
+### 11.1. Отзыв по серийному номеру
 
 ```bash
 pkica cert revoke \
@@ -424,7 +469,7 @@ revoked
 pkica cert show --serial <serial>
 ```
 
-### 10.2. Публикация CRL
+### 11.2. Публикация CRL
 
 После отзыва нужно сформировать новый список отозванных сертификатов.
 
@@ -448,7 +493,7 @@ data/crl/intermediate.crl.pem
 openssl crl -in data/crl/intermediate.crl.pem -text -noout
 ```
 
-### 10.3. Проверка отозванного сертификата
+### 11.3. Проверка отозванного сертификата
 
 ```bash
 pkica verify \
@@ -463,7 +508,7 @@ Certificate verification failed
 Reason: Certificate is revoked
 ```
 
-## 11. Сброс тестовой среды
+## 12. Сброс тестовой среды
 
 Команда сброса удаляет все данные УЦ: ключи, сертификаты, заявки, CRL, JSON-реестры и аудит.
 
@@ -501,7 +546,7 @@ pkica crl publish
 
 После сброса базовая структура каталогов создаётся заново.
 
-## 12. Рекомендуемый полный сценарий демонстрации
+## 13. Рекомендуемый полный сценарий демонстрации
 
 Готовый сценарий находится в `scripts/test_full_flow.sh`. Он проходит полный цикл: создание Root/Intermediate, выпуск серверных и клиентских сертификатов, проверку, экспорт, публикацию CRL, отзыв и проверку отозванного сертификата.
 
