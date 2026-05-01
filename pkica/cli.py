@@ -770,7 +770,7 @@ def command_status(args: argparse.Namespace) -> int:
     request_stats = count_by_status(requests)
     cert_stats = count_by_status(issued)
 
-    root_ready = ROOT_KEY_PATH.exists() and ROOT_CERT_PATH.exists()
+    root_ready = ROOT_CERT_PATH.exists()
     intermediate_ready = INTERMEDIATE_KEY_PATH.exists() and INTERMEDIATE_CERT_PATH.exists()
     crl_ready = CRL_PATH.exists()
 
