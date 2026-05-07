@@ -85,6 +85,8 @@ def test_cli_ca_happy_path_from_clean_temp_directory(tmp_path: Path) -> None:
         )
     )
     assert "Intermediate CA cert saved to:" in output
+    assert "Warning: isolate the Root CA private key" in output
+    assert "restricted-access system or to a protected external storage device" in output
     assert (tmp_path / "data/ca/intermediate/private/intermediate.key.pem").is_file()
     assert (tmp_path / "data/ca/intermediate/certs/intermediate.crt.pem").is_file()
 
@@ -207,6 +209,8 @@ def test_cli_ca_happy_path_from_clean_temp_directory(tmp_path: Path) -> None:
     assert "Total issued:    1" in output
     assert "Revoked:         1" in output
     assert "Revocation DB:   1" in output
+    assert "Warning: Root CA private key is present in the local CA directory." in output
+    assert "restricted-access system or to a protected external storage device" in output
 
 
 def test_cli_reports_errors_for_invalid_operations(tmp_path: Path) -> None:

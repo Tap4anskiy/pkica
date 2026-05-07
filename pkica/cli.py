@@ -176,6 +176,10 @@ def command_init_intermediate(args: argparse.Namespace) -> int:
     print(f"Intermediate CA key saved to:  {INTERMEDIATE_KEY_PATH}")
     print(f"Intermediate CA CSR saved to:  {INTERMEDIATE_CSR_PATH}")
     print(f"Intermediate CA cert saved to: {INTERMEDIATE_CERT_PATH}")
+    print(
+        "Warning: isolate the Root CA private key by moving it to a restricted-access "
+        "system or to a protected external storage device."
+    )
     return 0
 
 def command_key_gen(args: argparse.Namespace) -> int:
@@ -773,6 +777,7 @@ def command_status(args: argparse.Namespace) -> int:
     cert_stats = count_by_status(issued)
 
     root_ready = ROOT_CERT_PATH.exists()
+    root_key_present = ROOT_KEY_PATH.exists()
     intermediate_ready = INTERMEDIATE_KEY_PATH.exists() and INTERMEDIATE_CERT_PATH.exists()
     crl_ready = CRL_PATH.exists()
 
@@ -809,11 +814,20 @@ def command_status(args: argparse.Namespace) -> int:
     print(f"Revoked DB:      {REVOKED_DB_PATH if REVOKED_DB_PATH.exists() else '-'}")
     print(f"CRL path:        {CRL_PATH if CRL_PATH.exists() else '-'}")
 
+    if root_key_present:
+        print()
+        print(
+            "Warning: Root CA private key is present in the local CA directory. "
+            "Isolate it by moving it to a restricted-access system or to a "
+            "protected external storage device."
+        )
+
     append_jsonl(
         AUDIT_LOG_PATH,
         {
             "action": "status",
             "root_ready": root_ready,
+            "root_key_present": root_key_present,
             "intermediate_ready": intermediate_ready,
             "crl_ready": crl_ready,
             "requests_total": len(requests),
