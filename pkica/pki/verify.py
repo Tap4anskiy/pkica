@@ -6,7 +6,7 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
-from cryptography.x509.oid import ExtendedKeyUsageOID, ExtensionOID
+from cryptography.x509.oid import ExtendedKeyUsageOID, ExtensionOID, NameOID
 
 from pkica.pki.ca import load_certificate
 
@@ -14,6 +14,17 @@ from pkica.pki.ca import load_certificate
 def load_crl(path: Path) -> x509.CertificateRevocationList:
     data = path.read_bytes()
     return x509.load_pem_x509_crl(data)
+
+
+def get_name_for_chain(name: x509.Name) -> str:
+    common_names = name.get_attributes_for_oid(NameOID.COMMON_NAME)
+    if common_names:
+        return common_names[0].value
+    return name.rfc4514_string()
+
+
+def format_trust_chain(*certs: x509.Certificate) -> str:
+    return " -> ".join(get_name_for_chain(cert.subject) for cert in certs)
 
 
 def verify_signature(
@@ -232,6 +243,7 @@ def verify_certificate_chain(
         "subject": cert.subject.rfc4514_string(),
         "issuer": cert.issuer.rfc4514_string(),
         "chain_valid": True,
+        "trust_chain": format_trust_chain(cert, intermediate_cert, root_cert),
         "revoked": False,
         "crl_checked": False,
     }

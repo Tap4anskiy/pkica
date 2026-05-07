@@ -341,6 +341,7 @@ pkica verify \
 
 ```text
 Chain:       valid
+Trust chain: <subject CN> -> <intermediate CA CN> -> <root CA CN>
 CRL:         not checked
 Warning:     revocation status was not checked
 ```
@@ -372,6 +373,7 @@ pkica verify \
 
 ```text
 Chain:       valid
+Trust chain: <subject CN> -> <intermediate CA CN> -> <root CA CN>
 CRL:         checked
 Revocation:  not revoked
 ```

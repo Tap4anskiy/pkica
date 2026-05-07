@@ -343,6 +343,7 @@ def test_verify_uses_existing_crl_by_default_and_rejects_revoked_cert(tmp_path: 
 
     output = assert_success(run_pkica(tmp_path, "verify", "--cert", cert_path, "--no-crl"))
     assert "Chain:       valid" in output
+    assert "Trust chain: web.security.test -> Security Intermediate CA -> Security Root CA" in output
     assert "CRL:         not checked" in output
 
 
@@ -354,6 +355,7 @@ def test_active_certificate_verification_checks_published_crl_by_default(tmp_pat
 
     output = assert_success(run_pkica(tmp_path, "verify", "--cert", f"data/issued/{serial}.crt.pem"))
     assert "Chain:       valid" in output
+    assert "Trust chain: web.security.test -> Security Intermediate CA -> Security Root CA" in output
     assert "CRL:         checked" in output
     assert "Revocation:  not revoked" in output
 
@@ -558,6 +560,7 @@ def test_client_tls_certificate_uses_client_auth_eku(tmp_path: Path) -> None:
 
     output = assert_success(run_pkica(tmp_path, "verify", "--cert", f"data/issued/{serial}.crt.pem", "--no-crl"))
     assert "Chain:       valid" in output
+    assert "Trust chain: client.security.test -> Security Intermediate CA -> Security Root CA" in output
 
 
 def test_verify_rejects_intermediate_without_ca_true(tmp_path: Path) -> None:

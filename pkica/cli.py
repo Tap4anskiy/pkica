@@ -683,6 +683,7 @@ def command_verify(args: argparse.Namespace) -> int:
         print(f"Subject:     {result['subject']}")
         print(f"Issuer:      {result['issuer']}")
         print("Chain:       valid")
+        print(f"Trust chain: {result['trust_chain']}")
 
         if result["crl_checked"]:
             print("CRL:         checked")
@@ -701,6 +702,7 @@ def command_verify(args: argparse.Namespace) -> int:
                 "serial_number": result["serial_number"],
                 "subject": result["subject"],
                 "issuer": result["issuer"],
+                "trust_chain": result["trust_chain"],
                 "crl_checked": result["crl_checked"],
             },
         )
