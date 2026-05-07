@@ -53,26 +53,26 @@ README.md
 
 Таблица 1.1 - Связь CLI-команд с внутренними модулями программы
 
-| CLI-команда | Внутренняя функция или модуль | Назначение |
+| CLI-команда | Основные внутренние модули | Назначение |
 |---|---|---|
-| pkica ca init-root | pkica.cli.command_init_root; pkica.pki.ca.create_root_ca_certificate; pkica.pki.keys.generate_private_key | Создание закрытого ключа и самоподписанного сертификата Root CA |
-| pkica ca init-intermediate | pkica.cli.command_init_intermediate; pkica.pki.ca.create_intermediate_csr; pkica.pki.ca.create_intermediate_ca_certificate | Создание Intermediate CA и подпись его сертификата ключом Root CA |
-| pkica key gen | pkica.cli.command_key_gen; pkica.pki.keys.generate_private_key; pkica.pki.keys.save_private_key | Генерация ключевой пары субъекта |
-| pkica csr gen | pkica.cli.command_csr_gen; pkica.pki.csr.create_csr; pkica.pki.csr.save_csr | Формирование CSR субъекта с CN, организацией, страной и SAN |
-| pkica req submit | pkica.cli.command_req_submit; pkica.storage.requests.submit_request | Создание заявки на выпуск сертификата по CSR |
-| pkica req list | pkica.cli.command_req_list; pkica.storage.requests.load_requests | Просмотр списка заявок и фильтрация по статусу |
-| pkica req approve | pkica.cli.command_req_approve; pkica.storage.requests.update_request_status | Одобрение заявки |
-| pkica req reject | pkica.cli.command_req_reject; pkica.storage.requests.update_request_status | Отклонение заявки с фиксацией причины |
-| pkica cert issue | pkica.cli.command_cert_issue; pkica.policy.profiles.validate_csr_for_profile; pkica.policy.profiles.build_end_entity_extensions; pkica.pki.ca.create_end_entity_certificate | Выпуск конечного X.509-сертификата по CSR или одобренной заявке |
-| pkica cert show | pkica.cli.command_cert_show; pkica.pki.inspect | Просмотр сведений о сертификате, расширениях и путях к файлам |
-| pkica cert list | pkica.cli.command_cert_list; pkica.pki.ca.load_issued_records | Просмотр реестра выпущенных сертификатов |
-| pkica cert revoke | pkica.cli.command_cert_revoke; pkica.storage.revocations.add_revocation; pkica.pki.ca.mark_issued_record_revoked | Отзыв сертификата и изменение его статуса в реестре |
-| pkica crl publish | pkica.cli.command_crl_publish; pkica.pki.crl.create_crl; pkica.pki.crl.save_crl | Публикация CRL по реестру отозванных сертификатов |
-| pkica verify | pkica.cli.command_verify; pkica.pki.verify.verify_certificate_chain | Проверка цепочки доверия, сроков, расширений, подписей и статуса отзыва |
-| pkica export trust | pkica.cli.command_export_trust; pkica.storage.export.copy_file; pkica.storage.export.write_chain | Экспорт Root CA, Intermediate CA и цепочки доверия |
-| pkica export nginx | pkica.cli.command_export_nginx; pkica.storage.export.copy_file | Экспорт активного server_tls-сертификата и цепочки для Nginx |
-| pkica status | pkica.cli.command_status; pkica.storage.status.load_json_list; pkica.storage.status.count_by_status | Просмотр состояния УЦ, заявок, сертификатов и CRL |
-| pkica reset | pkica.cli.command_reset; pkica.config.ensure_ca_directories | Очистка тестовой среды и пересоздание базовой структуры каталогов |
+| pkica ca init-root | pkica.cli, pkica.pki.ca, pkica.pki.keys | Создание закрытого ключа и самоподписанного сертификата Root CA |
+| pkica ca init-intermediate | pkica.cli, pkica.pki.ca, pkica.pki.keys | Создание Intermediate CA и подпись его сертификата ключом Root CA |
+| pkica key gen | pkica.cli, pkica.pki.keys | Генерация ключевой пары субъекта |
+| pkica csr gen | pkica.cli, pkica.pki.csr | Формирование CSR субъекта |
+| pkica req submit | pkica.cli, pkica.storage.requests | Создание заявки на выпуск сертификата по CSR |
+| pkica req list | pkica.cli, pkica.storage.requests | Просмотр списка заявок |
+| pkica req approve | pkica.cli, pkica.storage.requests | Одобрение заявки |
+| pkica req reject | pkica.cli, pkica.storage.requests | Отклонение заявки с фиксацией причины |
+| pkica cert issue | pkica.cli, pkica.pki.ca, pkica.policy.profiles | Выпуск конечного X.509-сертификата по CSR или одобренной заявке |
+| pkica cert show | pkica.cli, pkica.pki.inspect | Просмотр сведений о сертификате |
+| pkica cert list | pkica.cli, pkica.pki.ca | Просмотр реестра выпущенных сертификатов |
+| pkica cert revoke | pkica.cli, pkica.pki.ca, pkica.storage.revocations | Отзыв сертификата и изменение его статуса в реестре |
+| pkica crl publish | pkica.cli, pkica.pki.crl, pkica.storage.revocations | Публикация CRL по реестру отозванных сертификатов |
+| pkica verify | pkica.cli, pkica.pki.verify | Проверка цепочки доверия и статуса отзыва |
+| pkica export trust | pkica.cli, pkica.storage.export | Экспорт Root CA, Intermediate CA и цепочки доверия |
+| pkica export nginx | pkica.cli, pkica.storage.export | Экспорт активного server_tls-сертификата и цепочки для Nginx |
+| pkica status | pkica.cli, pkica.storage.status | Просмотр состояния УЦ, заявок, сертификатов и CRL |
+| pkica reset | pkica.cli, pkica.config | Очистка тестовой среды и пересоздание базовой структуры каталогов |
 
 Разбор аргументов выполняется функцией pkica.cli.build_parser. После разбора argparse сохраняет в объекте args ссылку на обработчик команды через set_defaults(func=...). Функция pkica.cli.main вызывает args.func(args), поэтому каждая CLI-команда имеет отдельную функцию-обработчик.
 
@@ -102,7 +102,7 @@ README.md
 
 1.4 Основные последовательности выполнения операций
 
-В этом разделе показаны ключевые сценарии работы кода. Последовательности отражают не только порядок CLI-команд, но и то, какие внутренние функции участвуют в обработке.
+В этом разделе показаны ключевые сценарии работы кода. Для каждого сценария приведена общая последовательность обработки и краткое пояснение роли основных модулей.
 
 1.4.1 Создание Root CA и Intermediate CA
 
@@ -126,8 +126,6 @@ pkica.pki.ca.save_certificate
 pkica.storage.audit.append_jsonl
 ```
 
-Root CA создаётся функцией command_init_root. Она проверяет, что корневой ключ и сертификат ещё не существуют, создаёт рабочие каталоги, обрабатывает флаг --encrypt, разбирает строку subject функцией parse_subject и генерирует ключ через generate_private_key. Самоподписанный сертификат Root CA формируется в create_root_ca_certificate: subject и issuer совпадают, добавляются BasicConstraints с CA:TRUE и path_length=1, KeyUsage с keyCertSign и cRLSign, SubjectKeyIdentifier. Сертификат подписывается собственным закрытым ключом Root CA.
-
 ```text
 Команда pkica ca init-intermediate
     ↓
@@ -146,7 +144,7 @@ pkica.pki.ca.create_intermediate_ca_certificate
 pkica.storage.audit.append_jsonl
 ```
 
-Intermediate CA создаётся функцией command_init_intermediate. Она требует уже существующие файлы Root CA, загружает root.key.pem и root.crt.pem, создаёт отдельный ключ Intermediate CA и CSR для него. Функция create_intermediate_ca_certificate подписывает CSR промежуточного УЦ корневым ключом. В сертификат Intermediate CA добавляются BasicConstraints с CA:TRUE и заданным pathlen, KeyUsage с keyCertSign и cRLSign, SubjectKeyIdentifier и AuthorityKeyIdentifier. Перед выпуском проверяется, что срок действия Intermediate CA не превышает срок действия Root CA.
+Root CA создаётся как самоподписанный сертификат, а Intermediate CA выпускается по CSR и подписывается ключом Root CA. В этом сценарии pkica.cli управляет пользовательскими параметрами, pkica.pki.keys создаёт и сохраняет ключи, pkica.pki.ca формирует сертификаты, а pkica.storage.audit фиксирует события в журнале аудита.
 
 1.4.2 Выпуск сертификата
 
@@ -159,32 +157,20 @@ pkica.cli.command_cert_issue
     ↓
 Если используется --req-id: загрузка requests.json и проверка статуса approved
     ↓
-pkica.pki.csr.load_csr
+Проверка CSR и выбор профиля server_tls или client_tls
     ↓
-pkica.policy.profiles.validate_csr_for_profile
+Загрузка ключа и сертификата Intermediate CA
     ↓
-Загрузка ключа и сертификата Intermediate CA, загрузка сертификата Root CA
-    ↓
-pkica.policy.profiles.build_end_entity_extensions
-    ↓
-pkica.pki.ca.create_end_entity_certificate
+Формирование и подпись конечного сертификата
     ↓
 Сохранение .crt.pem и .fullchain.pem
     ↓
 pkica.pki.ca.append_issued_record
     ↓
 Если сертификат выпущен по заявке: pkica.storage.requests.mark_request_issued
-    ↓
-pkica.storage.audit.append_jsonl
 ```
 
-Профиль сертификата выбирается в command_cert_issue. Если сертификат выпускается по заявке, профиль берётся из записи requests.json. Если выпуск выполняется напрямую по --csr, профиль должен быть указан параметром --profile. Поддерживаются профили server_tls и client_tls.
-
-Проверка CSR выполняется функцией validate_csr_for_profile. Для server_tls требуется корректная подпись CSR и наличие Subject Alternative Name хотя бы с одним DNSName или IPAddress. Для client_tls SAN не обязателен, но подпись CSR также должна быть корректной.
-
-Расширения конечного сертификата создаёт build_end_entity_extensions. Для обоих профилей добавляются BasicConstraints с CA:FALSE, критический KeyUsage, SubjectKeyIdentifier и SAN из CSR, если он присутствует. Для RSA-ключа включается keyEncipherment, для ECDSA-ключа - keyAgreement. Для server_tls добавляется ExtendedKeyUsage serverAuth, для client_tls - clientAuth.
-
-Функция create_end_entity_certificate формирует сертификат по CSR, устанавливает issuer из сертификата Intermediate CA, добавляет подготовленные расширения, добавляет AuthorityKeyIdentifier и подписывает сертификат закрытым ключом Intermediate CA. Перед подписью проверяется, что срок действия конечного сертификата не превышает срок действия Intermediate CA. После выпуска certificate_to_record формирует запись для issued.json, save_fullchain сохраняет цепочку конечный сертификат + Intermediate CA + Root CA.
+Сертификат может выпускаться напрямую по CSR или по ранее одобренной заявке. Профили server_tls и client_tls задают набор расширений X.509 и проверяются в pkica.policy.profiles, а подпись конечного сертификата выполняется ключом Intermediate CA в pkica.pki.ca. После выпуска программа сохраняет сертификат, fullchain-файл и обновляет JSON-реестры.
 
 1.4.3 Отзыв сертификата и публикация CRL
 
@@ -193,16 +179,14 @@ pkica.storage.audit.append_jsonl
     ↓
 pkica.cli.command_cert_revoke
     ↓
-pkica.pki.ca.find_issued_record_by_serial
+Поиск сертификата в issued.json
     ↓
-pkica.storage.revocations.add_revocation
+Добавление записи в revoked.json
     ↓
-pkica.pki.ca.mark_issued_record_revoked
-    ↓
-pkica.storage.audit.append_jsonl
+Изменение статуса сертификата на revoked
 ```
 
-Отзыв выполняется по серийному номеру сертификата. command_cert_revoke находит запись в issued.json, проверяет, что сертификат ещё не отозван, затем добавляет запись в revoked.json через add_revocation. В запись попадают serial_number, reason, cert_path и revoked_at. После этого mark_issued_record_revoked изменяет запись в issued.json: статус становится revoked, добавляются revoked_at и revocation_reason.
+Отзыв выполняется по серийному номеру сертификата. Программа находит запись в issued.json, фиксирует причину и время отзыва в revoked.json, после чего изменяет статус сертификата в реестре выданных сертификатов.
 
 ```text
 Команда pkica crl publish
@@ -211,16 +195,14 @@ pkica.cli.command_crl_publish
     ↓
 Загрузка ключа и сертификата Intermediate CA
     ↓
-pkica.storage.revocations.load_revocations
+Загрузка revoked.json
     ↓
-pkica.pki.crl.create_crl
+Формирование и подпись CRL
     ↓
-pkica.pki.crl.save_crl
-    ↓
-pkica.storage.audit.append_jsonl
+Сохранение data/crl/intermediate.crl.pem
 ```
 
-Публикация CRL выполняется командой crl publish. Функция create_crl создаёт CertificateRevocationListBuilder, задаёт issuer по сертификату Intermediate CA, last_update и next_update, добавляет AuthorityKeyIdentifier. Для каждой записи revoked.json создаётся RevokedCertificate с серийным номером, датой отзыва и расширением CRLReason. Сопоставление текстовых причин отзыва с x509.ReasonFlags хранится в REASON_MAP. CRL подписывается закрытым ключом Intermediate CA и сохраняется в data/crl/intermediate.crl.pem.
+CRL формируется на основе revoked.json и подписывается закрытым ключом Intermediate CA. В список попадают серийные номера отозванных сертификатов, даты и причины отзыва.
 
 1.4.4 Проверка сертификата
 
@@ -231,22 +213,16 @@ pkica.cli.command_verify
     ↓
 Выбор CRL: --no-crl, --crl или data/crl/intermediate.crl.pem
     ↓
-pkica.pki.verify.verify_certificate_chain
+Загрузка сертификата, Intermediate CA и Root CA
     ↓
-Проверка сроков действия
+Проверка цепочки доверия, сроков, расширений и подписей
     ↓
-Проверка issuer/subject
-    ↓
-Проверка BasicConstraints, KeyUsage, EKU и path length
-    ↓
-Проверка подписей конечного, промежуточного и корневого сертификатов
-    ↓
-Если CRL задан: проверка issuer, сроков, подписи CRL и отсутствия serial в CRL
+Если CRL задан: проверка статуса отзыва
     ↓
 Запись результата в audit.log
 ```
 
-Функция verify_certificate_chain загружает проверяемый сертификат, Intermediate CA и Root CA. Проверяются сроки действия всех сертификатов, соответствие issuer и subject в цепочке, самоподписанность Root CA, CA-расширения у Root и Intermediate, запрет CA-ролей у конечного сертификата и наличие EKU serverAuth или clientAuth. Подписи проверяются отдельно для RSA и ECDSA. Если используется CRL, дополнительно проверяются issuer CRL, сроки last_update/next_update, подпись CRL и отсутствие серийного номера сертификата среди отозванных.
+Проверка выполняется в pkica.pki.verify. Модуль контролирует корректность цепочки Root CA - Intermediate CA - конечный сертификат, сроки действия, основные X.509-расширения и криптографические подписи. Если опубликован CRL или он указан явно, дополнительно проверяется, что сертификат не входит в список отозванных.
 
 1.5 Работа с реестрами и аудитом
 
@@ -289,14 +265,8 @@ pkica.pki.verify.verify_certificate_chain
 
 | Файл | Назначение |
 |---|---|
-| tests/test_cli_flow.py | Проверка основного CLI-сценария от чистой директории: создание Root CA и Intermediate CA, генерация ключа и CSR, создание и одобрение заявки, выпуск сертификата, просмотр сведений, отзыв, публикация CRL и просмотр статуса |
-| tests/test_cli_flow.py | Проверка ошибок CLI: создание Intermediate CA без Root CA, подача отсутствующего CSR, повторная инициализация Root CA |
-| tests/test_security.py | Проверка прав доступа к приватным ключам и чувствительным каталогам |
-| tests/test_security.py | Проверка поведения verify с CRL по умолчанию, --no-crl, отсутствующим CRL и конфликтующими параметрами --crl и --no-crl |
-| tests/test_security.py | Проверка ограничений сроков действия: конечный сертификат не может жить дольше Intermediate CA |
-| tests/test_security.py | Проверка автомата состояний заявок: нельзя выпускать pending-заявку, повторно одобрять issued-заявку или отклонять уже выпущенную заявку |
-| tests/test_security.py | Проверка повторного отзыва, отсутствующих сертификатов, требования SAN для server_tls и EKU clientAuth для client_tls |
-| tests/test_security.py | Проверка низкоуровневой валидации цепочки: CA:TRUE для Intermediate, критичность BasicConstraints и KeyUsage, допустимые EKU, корректные сроки, соответствие issuer/subject и подписи |
+| tests/test_cli_flow.py | Проверка основного CLI-сценария и типовых ошибок команд |
+| tests/test_security.py | Проверка прав доступа, CRL, ограничений сроков, статусов заявок, повторного отзыва, SAN/EKU и корректности цепочки доверия |
 | scripts/test_full_flow.sh | Проверка полного сценария работы УЦ через CLI с зашифрованными ключами, несколькими серверными и клиентским сертификатом, экспортом, отзывом, CRL и финальным status |
 
 В pyproject.toml проект объявлен как пакет pkica версии 0.1.0. Единственная внешняя зависимость приложения - cryptography версии 42.0.0 или новее. Точка входа CLI зарегистрирована как консольная команда pkica, которая вызывает pkica.cli:main.
