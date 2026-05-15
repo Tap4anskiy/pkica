@@ -7,53 +7,59 @@
   </div>
 </div>
 
-<section class="issue-grid">
-  <div class="panel issue-panel">
-    <h2>Выпустить по одобренной заявке</h2>
-    <form class="stack" method="post" action="/certificates/issue/request">
-      <label>ID заявки
-        <input name="request_id" inputmode="numeric" list="approved-request-ids" value="{{ issue_request_id or '' }}" placeholder="Например: 12" required>
-      </label>
-      <datalist id="approved-request-ids">
-        {% for item in approved_requests %}
-        <option value="{{ item.id }}">{{ item.cn or item.subject }} / {{ item.profile }}</option>
-        {% endfor %}
-      </datalist>
-      <label>Срок действия, дней
-        <input name="days" inputmode="numeric" value="{{ issue_request_days or default_days }}" required>
-      </label>
-      <button>Выпустить сертификат</button>
-    </form>
-    {% if approved_requests %}
-    <div class="mini-list">
-      <strong>Одобренные заявки</strong>
-      {% for item in approved_requests %}
-      <a href="/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="muted">Одобренных заявок пока нет.</p>
-    {% endif %}
-  </div>
+<section class="panel issue-panel">
+  <h2>Выпуск сертификата</h2>
+  <div class="issue-switch">
+    <input id="issue-by-request" name="issue-mode" type="radio" {% if not csr %}checked{% endif %}>
+    <label for="issue-by-request">По заявке</label>
+    <input id="issue-by-csr" name="issue-mode" type="radio" {% if csr %}checked{% endif %}>
+    <label for="issue-by-csr">Из CSR</label>
 
-  <div class="panel issue-panel">
-    <h2>Выпустить напрямую из CSR</h2>
-    <form class="stack" method="post" action="/certificates/issue/csr">
-      <label>Профиль
-        <select name="profile">
-          {% for profile in profiles %}
-          <option value="{{ profile }}" {% if (csr_profile or "server_tls") == profile %}selected{% endif %}>{{ profile }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>Срок действия, дней
-        <input name="days" inputmode="numeric" value="{{ csr_days or default_days }}" required>
-      </label>
-      <label>CSR PEM
-        <textarea name="csr" rows="9" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>
-      </label>
-      <button>Выпустить из CSR</button>
-    </form>
+    <div class="issue-mode issue-mode-request">
+      <form class="stack" method="post" action="/certificates/issue/request">
+        <label>Одобренная заявка
+          <select name="request_id" required>
+            <option value="" disabled {% if not issue_request_id %}selected{% endif %}>Выберите заявку</option>
+            {% for item in approved_requests %}
+            <option value="{{ item.id }}" {% if issue_request_id|string == item.id|string %}selected{% endif %}>#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Срок действия, дней
+          <input name="days" inputmode="numeric" value="{{ issue_request_days or default_days }}" required>
+        </label>
+        <button>Выпустить сертификат</button>
+      </form>
+      {% if approved_requests %}
+      <div class="mini-list">
+        <strong>Одобренные заявки</strong>
+        {% for item in approved_requests %}
+        <a href="/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Одобренных заявок пока нет.</p>
+      {% endif %}
+    </div>
+
+    <div class="issue-mode issue-mode-csr">
+      <form class="stack" method="post" action="/certificates/issue/csr">
+        <label>Профиль
+          <select name="profile">
+            {% for profile in profiles %}
+            <option value="{{ profile }}" {% if (csr_profile or "server_tls") == profile %}selected{% endif %}>{{ profile }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Срок действия, дней
+          <input name="days" inputmode="numeric" value="{{ csr_days or default_days }}" required>
+        </label>
+        <label>CSR PEM
+          <textarea name="csr" rows="9" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>
+        </label>
+        <button>Выпустить из CSR</button>
+      </form>
+    </div>
   </div>
 </section>
 
