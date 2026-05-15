@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Сертификат {{ cert.serial_number }}</h1>
+<dl><dt>Subject</dt><dd>{{ cert.subject }}</dd><dt>Issuer</dt><dd>{{ cert.issuer }}</dd><dt>SAN</dt><dd>{{ cert.san }}</dd><dt>EKU</dt><dd>{{ cert.eku }}</dd><dt>Срок</dt><dd>{{ cert.not_valid_before }} - {{ cert.not_valid_after }}</dd><dt>PEM</dt><dd>{{ cert.cert_path }}</dd><dt>Статус</dt><dd>{{ cert.status }}</dd><dt>Проверка</dt><dd>{{ "OK" if verification.ok else verification.error }}</dd></dl>
+{% if cert.status != "revoked" %}<form method="post" action="/certificates/{{ cert.serial_number }}/revoke" onsubmit="return confirm('Отозвать сертификат?')"><select name="reason"><option>unspecified</option><option>keyCompromise</option><option>cessationOfOperation</option></select><button class="danger">Отозвать</button></form>{% endif %}
+{% endblock %}
+

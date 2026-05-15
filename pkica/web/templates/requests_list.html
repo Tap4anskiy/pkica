@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Заявки</h1>
+<form method="get" class="toolbar">
+  <select name="status">
+    <option value="">Все</option>
+    {% for s in ["pending", "approved", "rejected", "issued"] %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button>Фильтр</button>
+</form>
+<table><tr><th>ID</th><th>CN</th><th>Профиль</th><th>Статус</th><th>Создана</th><th>SAN</th><th></th></tr>
+{% for item in requests %}
+<tr><td>{{ item.id }}</td><td>{{ item.cn or "-" }}</td><td>{{ item.profile }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td><td>{{ item.san }}</td><td><a href="/requests/{{ item.id }}">Открыть</a></td></tr>
+{% endfor %}</table>
+{% endblock %}
+

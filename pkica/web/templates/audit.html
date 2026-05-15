@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Аудит</h1>
+<table><tr><th>Время</th><th>Действие</th><th>Результат</th><th>Детали</th></tr>
+{% for event in events %}<tr><td>{{ event.timestamp }}</td><td>{{ event.action }}</td><td>{{ event.result or "-" }}</td><td><code>{{ event }}</code></td></tr>{% endfor %}
+</table>
+{% endblock %}
+

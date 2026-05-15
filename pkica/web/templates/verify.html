@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Проверка сертификата</h1>
+<form method="post" action="/verify" class="stack">
+  <label>PEM<textarea name="pem" rows="12">{{ pem or "" }}</textarea></label>
+  <label>или путь внутри стенда<input name="path" value="{{ path or "" }}"></label>
+  <button>Проверить</button>
+</form>
+{% if result %}<h2>Результат</h2><pre>{{ result }}</pre>{% endif %}
+{% endblock %}
+

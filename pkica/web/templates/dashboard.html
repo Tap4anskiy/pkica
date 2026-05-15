@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Состояние УЦ</h1>
+<section class="grid">
+  <div class="tile"><b>Root CA</b><span>{{ "ready" if status.root_ready else "not initialized" }}</span></div>
+  <div class="tile"><b>Intermediate CA</b><span>{{ "ready" if status.intermediate_ready else "not initialized" }}</span></div>
+  <div class="tile"><b>Pending</b><span>{{ status.request_stats.get("pending", 0) }}</span></div>
+  <div class="tile"><b>Issued</b><span>{{ status.certificate_stats.get("issued", 0) }}</span></div>
+  <div class="tile"><b>Revoked</b><span>{{ status.certificate_stats.get("revoked", 0) }}</span></div>
+  <div class="tile"><b>CRL</b><span>{{ crl.path if crl.exists else "not published" }}</span></div>
+</section>
+{% if status.warnings %}
+<h2>Предупреждения</h2>
+<ul>{% for warning in status.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}
+

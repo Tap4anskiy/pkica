@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Заявка #{{ item.id }}</h1>
+<dl><dt>CN</dt><dd>{{ item.cn or "-" }}</dd><dt>Профиль</dt><dd>{{ item.profile }}</dd><dt>Статус</dt><dd>{{ item.status }}</dd><dt>Subject</dt><dd>{{ item.subject }}</dd><dt>SAN</dt><dd>{{ item.san }}</dd><dt>Проверка профиля</dt><dd>{{ validation.message }}</dd></dl>
+<div class="actions">
+{% if item.status == "pending" %}
+<form method="post" action="/requests/{{ item.id }}/approve"><button>Одобрить</button></form>
+<form method="post" action="/requests/{{ item.id }}/reject" onsubmit="return confirm('Отклонить заявку?')"><input name="reason" placeholder="Причина"><button class="danger">Отклонить</button></form>
+{% endif %}
+{% if item.status == "approved" %}<form method="post" action="/requests/{{ item.id }}/issue"><button>Выпустить сертификат</button></form>{% endif %}
+{% if item.issued_serial_number %}<a href="/certificates/{{ item.issued_serial_number }}">Сертификат</a>{% endif %}
+</div>
+{% endblock %}
+

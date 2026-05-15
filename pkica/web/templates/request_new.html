@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Новая CSR-заявка</h1>
+<form method="post" action="/requests" class="stack">
+  <label>Профиль<select name="profile"><option value="server_tls" {% if profile == "server_tls" %}selected{% endif %}>server_tls</option><option value="client_tls" {% if profile == "client_tls" %}selected{% endif %}>client_tls</option></select></label>
+  <label>CSR PEM<textarea name="csr" rows="16">{{ csr or "" }}</textarea></label>
+  <button>Отправить</button>
+</form>
+{% endblock %}
+

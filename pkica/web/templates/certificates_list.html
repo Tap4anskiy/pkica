@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Сертификаты</h1>
+<table><tr><th>Serial</th><th>Subject</th><th>Профиль</th><th>Not before</th><th>Not after</th><th>Статус</th><th></th></tr>
+{% for cert in certificates %}
+<tr><td>{{ cert.serial_number }}</td><td>{{ cert.subject }}</td><td>{{ cert.profile }}</td><td>{{ cert.not_valid_before }}</td><td>{{ cert.not_valid_after }}</td><td>{{ cert.display_status }}</td><td><a href="/certificates/{{ cert.serial_number }}">Открыть</a></td></tr>
+{% endfor %}</table>
+{% endblock %}
+

@@ -34,6 +34,22 @@ EXPORT_DIR = BASE_DIR / "export"
 TRUST_EXPORT_DIR = EXPORT_DIR / "trust"
 NGINX_EXPORT_DIR = EXPORT_DIR / "nginx"
 
+WEB_DIR = BASE_DIR / "web"
+WEB_PRIVATE_DIR = WEB_DIR / "private"
+WEB_CSR_DIR = WEB_DIR / "csr"
+WEB_CERTS_DIR = WEB_DIR / "certs"
+WEB_NGINX_DIR = WEB_DIR / "nginx"
+WEB_RUN_DIR = WEB_DIR / "run"
+WEB_LOG_DIR = WEB_DIR / "logs"
+WEB_KEY_PATH = WEB_PRIVATE_DIR / "pkica-web.key.pem"
+WEB_CSR_PATH = WEB_CSR_DIR / "pkica-web.csr.pem"
+WEB_CERT_PATH = WEB_CERTS_DIR / "pkica-web.crt.pem"
+WEB_FULLCHAIN_PATH = WEB_CERTS_DIR / "pkica-web.fullchain.pem"
+WEB_NGINX_CONF_PATH = WEB_NGINX_DIR / "pkica-web.conf"
+WEB_PID_PATH = WEB_RUN_DIR / "pkica-web.pid"
+WEB_LOG_PATH = WEB_LOG_DIR / "web.log"
+WEB_STATE_PATH = WEB_DIR / "web-state.json"
+
 def ensure_ca_directories() -> None:
     """Создаёт рабочие каталоги CA и выставляет приватные права доступа."""
     protected_dirs = [
