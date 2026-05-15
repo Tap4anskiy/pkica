@@ -1,17 +1,78 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Состояние УЦ</h1>
-<section class="grid">
-  <div class="tile"><b>Root CA</b><span>{{ "ready" if status.root_ready else "not initialized" }}</span></div>
-  <div class="tile"><b>Intermediate CA</b><span>{{ "ready" if status.intermediate_ready else "not initialized" }}</span></div>
-  <div class="tile"><b>Pending</b><span>{{ status.request_stats.get("pending", 0) }}</span></div>
-  <div class="tile"><b>Issued</b><span>{{ status.certificate_stats.get("issued", 0) }}</span></div>
-  <div class="tile"><b>Revoked</b><span>{{ status.certificate_stats.get("revoked", 0) }}</span></div>
-  <div class="tile"><b>CRL</b><span>{{ crl.path if crl.exists else "not published" }}</span></div>
+<div class="page-head">
+  <div>
+    <h1>Панель pkica</h1>
+    <p>Обзор состояния УЦ, заявок, сертификатов и списка отзыва.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link" href="/requests/new">Новая CSR</a>
+    <a class="button-link secondary" href="/verify">Проверить сертификат</a>
+  </div>
+</div>
+
+<section class="metrics-grid">
+  <div class="metric"><span>Ожидают решения</span><strong>{{ status.request_stats.get("pending", 0) }}</strong><a href="/requests?status=pending">Открыть заявки</a></div>
+  <div class="metric"><span>Выпущено</span><strong>{{ status.certificate_stats.get("issued", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
+  <div class="metric"><span>Отозвано</span><strong>{{ status.certificate_stats.get("revoked", 0) }}</strong><a href="/crl">CRL</a></div>
+  <div class="metric"><span>Всего заявок</span><strong>{{ status.requests_total }}</strong><a href="/requests">Журнал заявок</a></div>
 </section>
+
+<section class="dashboard-grid">
+  <article class="panel">
+    <h2>Состояние цепочки</h2>
+    <div class="status-list">
+      <div><b>Root CA</b><span class="badge {{ 'ok' if status.root_ready else 'bad' }}">{{ "готов" if status.root_ready else "не создан" }}</span></div>
+      <p>{{ status.root_cert.subject if status.root_cert else "Сертификат Root CA не найден" }}</p>
+      <small>Действует до: {{ status.root_cert.not_valid_after if status.root_cert else "-" }}</small>
+      <div><b>Intermediate CA</b><span class="badge {{ 'ok' if status.intermediate_ready else 'bad' }}">{{ "готов" if status.intermediate_ready else "не создан" }}</span></div>
+      <p>{{ status.intermediate_cert.subject if status.intermediate_cert else "Сертификат Intermediate CA не найден" }}</p>
+      <small>Действует до: {{ status.intermediate_cert.not_valid_after if status.intermediate_cert else "-" }}</small>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2>Заявки</h2>
+    <table class="compact-table">
+      <tr><th>Статус</th><th>Количество</th></tr>
+      <tr><td>pending</td><td>{{ status.request_stats.get("pending", 0) }}</td></tr>
+      <tr><td>approved</td><td>{{ status.request_stats.get("approved", 0) }}</td></tr>
+      <tr><td>issued</td><td>{{ status.request_stats.get("issued", 0) }}</td></tr>
+      <tr><td>rejected</td><td>{{ status.request_stats.get("rejected", 0) }}</td></tr>
+    </table>
+  </article>
+
+  <article class="panel">
+    <h2>Сертификаты</h2>
+    <table class="compact-table">
+      <tr><th>Статус</th><th>Количество</th></tr>
+      <tr><td>active</td><td>{{ status.certificate_stats.get("issued", 0) }}</td></tr>
+      <tr><td>revoked</td><td>{{ status.certificate_stats.get("revoked", 0) }}</td></tr>
+      <tr><td>в БД отзыва</td><td>{{ status.revocations_total }}</td></tr>
+    </table>
+  </article>
+
+  <article class="panel">
+    <h2>CRL</h2>
+    <dl class="plain-list">
+      <dt>Состояние</dt><dd>{{ "опубликован" if crl.exists else "не опубликован" }}</dd>
+      <dt>Путь</dt><dd>{{ crl.path }}</dd>
+      <dt>Last update</dt><dd>{{ crl.last_update or "-" }}</dd>
+      <dt>Next update</dt><dd>{{ crl.next_update or "-" }}</dd>
+    </dl>
+    <form method="post" action="/crl/publish"><button>Опубликовать CRL</button></form>
+  </article>
+</section>
+
 {% if status.warnings %}
-<h2>Предупреждения</h2>
-<ul>{% for warning in status.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+<section class="panel warnings">
+  <h2>Предупреждения</h2>
+  <ul>{% for warning in status.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+</section>
+{% else %}
+<section class="panel">
+  <h2>Предупреждения</h2>
+  <p>Сертификатов, истекающих в ближайшие 30 дней, не найдено.</p>
+</section>
 {% endif %}
 {% endblock %}
-

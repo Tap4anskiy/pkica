@@ -23,10 +23,28 @@ def get_status(expiring_days: int = 30) -> dict:
         if record.get("status") != "revoked" and now <= not_after <= soon:
             warnings.append(f"Certificate {record.get('serial_number')} expires at {record.get('not_valid_after')}")
 
+    root_cert_info = None
+    if ROOT_CERT_PATH.exists():
+        root_cert = load_certificate(ROOT_CERT_PATH)
+        root_cert_info = {
+            "subject": root_cert.subject.rfc4514_string(),
+            "not_valid_after": root_cert.not_valid_after_utc.isoformat(),
+        }
+
+    intermediate_cert_info = None
+    if INTERMEDIATE_CERT_PATH.exists():
+        intermediate_cert = load_certificate(INTERMEDIATE_CERT_PATH)
+        intermediate_cert_info = {
+            "subject": intermediate_cert.subject.rfc4514_string(),
+            "not_valid_after": intermediate_cert.not_valid_after_utc.isoformat(),
+        }
+
     return {
         "root_ready": ROOT_CERT_PATH.exists(),
+        "root_cert": root_cert_info,
         "root_key_present": ROOT_KEY_PATH.exists(),
         "intermediate_ready": INTERMEDIATE_KEY_PATH.exists() and INTERMEDIATE_CERT_PATH.exists(),
+        "intermediate_cert": intermediate_cert_info,
         "crl_ready": CRL_PATH.exists(),
         "requests_total": len(requests),
         "request_stats": count_by_status(requests),
@@ -40,4 +58,3 @@ def get_status(expiring_days: int = 30) -> dict:
         },
         "warnings": warnings,
     }
-
