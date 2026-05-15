@@ -72,6 +72,18 @@ def enrich_dashboard_status(status: dict) -> dict:
     return status
 
 
+def certificates_for_select() -> list[dict]:
+    certificates = list_certificates()
+    for cert in certificates:
+        subject = cert.get("subject", "")
+        cert["label"] = subject
+        for part in subject.split(","):
+            if part.strip().startswith("CN="):
+                cert["label"] = part.strip()[3:]
+                break
+    return certificates
+
+
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
@@ -167,20 +179,40 @@ def audit_page(request: Request, limit: int = 100) -> HTMLResponse:
 
 @router.get("/verify", response_class=HTMLResponse)
 def verify_page(request: Request) -> HTMLResponse:
-    return render(request, "verify.html", {})
+    return render(request, "verify.html", {"certificates": certificates_for_select()})
 
 
 @router.post("/verify")
 async def verify_submit(request: Request) -> HTMLResponse:
     data = await form_data(request)
+    certificates = certificates_for_select()
     try:
-        if data.get("pem", "").strip():
+        selected_serial = data.get("serial", "").strip()
+        if selected_serial:
+            cert = get_certificate(selected_serial)
+            result = verify_certificate_path(Path(cert["cert_path"]), source="web")
+        elif data.get("pem", "").strip():
             result = verify_certificate_pem(data["pem"], source="web")
         else:
             path = Path(data.get("path", ""))
             if path.is_absolute() or ".." in path.parts:
                 raise ValueError("Only relative paths inside the stand are allowed")
             result = verify_certificate_path(path, source="web")
-        return render(request, "verify.html", {"result": result})
+        return render(
+            request,
+            "verify.html",
+            {"result": result, "certificates": certificates, "selected_serial": selected_serial},
+        )
     except Exception as exc:
-        return render(request, "verify.html", {"error": str(exc), "pem": data.get("pem", ""), "path": data.get("path", "")}, 400)
+        return render(
+            request,
+            "verify.html",
+            {
+                "error": str(exc),
+                "pem": data.get("pem", ""),
+                "path": data.get("path", ""),
+                "certificates": certificates,
+                "selected_serial": data.get("serial", ""),
+            },
+            400,
+        )
