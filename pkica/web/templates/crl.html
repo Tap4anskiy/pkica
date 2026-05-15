@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>CRL</h1>
-<dl><dt>Путь</dt><dd>{{ crl.path }}</dd><dt>Опубликован</dt><dd>{{ crl.exists }}</dd><dt>Last update</dt><dd>{{ crl.last_update or "-" }}</dd><dt>Next update</dt><dd>{{ crl.next_update or "-" }}</dd></dl>
+<dl><dt>Путь</dt><dd>{{ crl.path }}</dd><dt>Опубликован</dt><dd>{{ crl.exists }}</dd><dt>Обновлён</dt><dd>{{ crl.last_update|datetime }}</dd><dt>Действует до</dt><dd>{{ crl.next_update|datetime }}</dd></dl>
 <form method="post" action="/crl/publish"><button>Опубликовать CRL</button></form>
 <h2>Отозванные</h2>
-<table><tr><th>Serial</th><th>Reason</th><th>Revoked at</th></tr>{% for item in crl.revoked %}<tr><td>{{ item.serial_number }}</td><td>{{ item.reason }}</td><td>{{ item.revoked_at }}</td></tr>{% endfor %}</table>
+<table><tr><th>Serial</th><th>Reason</th><th>Revoked at</th></tr>{% for item in crl.revoked %}<tr><td>{{ item.serial_number }}</td><td>{{ item.reason }}</td><td>{{ item.revoked_at|datetime }}</td></tr>{% endfor %}</table>
 {% endblock %}
-

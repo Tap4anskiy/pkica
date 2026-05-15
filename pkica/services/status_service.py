@@ -33,7 +33,6 @@ def cert_info(path: Path) -> dict | None:
         "name": cert_common_name(cert),
         "subject": cert.subject.rfc4514_string(),
         "not_valid_after": cert.not_valid_after_utc.isoformat(),
-        "valid_until": cert.not_valid_after_utc.strftime("%d.%m.%Y %H:%M UTC"),
     }
 
 
@@ -50,7 +49,8 @@ def get_status(expiring_days: int = 30) -> dict:
         except Exception:
             continue
         if record.get("status") != "revoked" and now <= not_after <= soon:
-            warnings.append(f"Certificate {record.get('serial_number')} expires at {record.get('not_valid_after')}")
+            expires_at = not_after.astimezone(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+            warnings.append(f"Certificate {record.get('serial_number')} expires at {expires_at}")
 
     root_cert_info = cert_info(ROOT_CERT_PATH)
     intermediate_cert_info = cert_info(INTERMEDIATE_CERT_PATH)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -31,6 +32,26 @@ from pkica.config import INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
+
+
+def format_datetime(value: object, fallback: str = "-") -> str:
+    if value is None or value == "":
+        return fallback
+
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return str(value)
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+templates.env.filters["datetime"] = format_datetime
 
 
 async def form_data(request: Request) -> dict[str, str]:

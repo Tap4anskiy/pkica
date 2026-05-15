@@ -10,7 +10,6 @@
 </form>
 <table><tr><th>ID</th><th>CN</th><th>Профиль</th><th>Статус</th><th>Создана</th><th>SAN</th><th></th></tr>
 {% for item in requests %}
-<tr><td>{{ item.id }}</td><td>{{ item.cn or "-" }}</td><td>{{ item.profile }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td><td>{{ item.san }}</td><td><a href="/requests/{{ item.id }}">Открыть</a></td></tr>
+<tr><td>{{ item.id }}</td><td>{{ item.cn or "-" }}</td><td>{{ item.profile }}</td><td>{{ item.status }}</td><td>{{ item.created_at|datetime }}</td><td>{{ item.san }}</td><td><a href="/requests/{{ item.id }}">Открыть</a></td></tr>
 {% endfor %}</table>
 {% endblock %}
-

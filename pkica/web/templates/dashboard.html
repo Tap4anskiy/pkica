@@ -34,7 +34,7 @@
           <dt>Subject</dt>
           <dd>{{ status.root_cert.subject if status.root_cert else (status.paths.root_cert if status.root_ready and status.paths else "Сертификат Root CA не найден") }}</dd>
           <dt>Действует до</dt>
-          <dd>{{ status.root_cert.valid_until if status.root_cert else "-" }}</dd>
+          <dd>{{ status.root_cert.not_valid_after|datetime if status.root_cert else "-" }}</dd>
         </dl>
       </section>
       <section class="chain-item">
@@ -49,7 +49,7 @@
           <dt>Subject</dt>
           <dd>{{ status.intermediate_cert.subject if status.intermediate_cert else (status.paths.intermediate_cert if status.intermediate_ready and status.paths else "Сертификат Intermediate CA не найден") }}</dd>
           <dt>Действует до</dt>
-          <dd>{{ status.intermediate_cert.valid_until if status.intermediate_cert else "-" }}</dd>
+          <dd>{{ status.intermediate_cert.not_valid_after|datetime if status.intermediate_cert else "-" }}</dd>
         </dl>
       </section>
     </div>
@@ -81,8 +81,8 @@
     <dl class="plain-list">
       <dt>Состояние</dt><dd>{{ "опубликован" if crl.exists else "не опубликован" }}</dd>
       <dt>Путь</dt><dd>{{ crl.path }}</dd>
-      <dt>Last update</dt><dd>{{ crl.last_update or "-" }}</dd>
-      <dt>Next update</dt><dd>{{ crl.next_update or "-" }}</dd>
+      <dt>Обновлён</dt><dd>{{ crl.last_update|datetime }}</dd>
+      <dt>Действует до</dt><dd>{{ crl.next_update|datetime }}</dd>
     </dl>
     <form method="post" action="/crl/publish"><button>Опубликовать CRL</button></form>
   </article>
