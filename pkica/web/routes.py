@@ -108,7 +108,7 @@ def certificate_detail(request: Request, serial: str) -> HTMLResponse:
     return render(
         request,
         "certificate_detail.html",
-        {"cert": cert, "verification": verification, "revocation_reasons": REASON_MAP.keys()},
+        {"cert": cert, "verification": verification, "revocation_reasons": list(REASON_MAP)},
     )
 
 
