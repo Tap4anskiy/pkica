@@ -26,6 +26,7 @@ from pkica.services.request_service import (
     submit_csr_pem,
 )
 from pkica.services.status_service import get_status
+from pkica.pki.crl import REASON_MAP
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
@@ -104,7 +105,11 @@ def certificate_detail(request: Request, serial: str) -> HTMLResponse:
         verification = {"ok": True, "result": verify_certificate_path(Path(cert["cert_path"]), source="web")}
     except Exception as exc:
         verification = {"ok": False, "error": str(exc)}
-    return render(request, "certificate_detail.html", {"cert": cert, "verification": verification})
+    return render(
+        request,
+        "certificate_detail.html",
+        {"cert": cert, "verification": verification, "revocation_reasons": REASON_MAP.keys()},
+    )
 
 
 @router.post("/certificates/{serial}/revoke")

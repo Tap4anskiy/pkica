@@ -24,3 +24,6 @@ include = ["pkica*"]
 
 [tool.setuptools.package-data]
 "pkica.web" = ["templates/*.html", "static/*.css"]
+
+[tool.pytest.ini_options]
+norecursedirs = ["data", "build", "dist", ".venv"]
