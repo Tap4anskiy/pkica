@@ -3,6 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+
 from pkica.config import CRL_PATH, INTERMEDIATE_CERT_PATH, INTERMEDIATE_KEY_PATH, ISSUED_DB_PATH, REQUESTS_DB_PATH, REVOKED_DB_PATH, ROOT_CERT_PATH, ROOT_KEY_PATH
 from pkica.pki.ca import load_certificate
 from pkica.storage.status import count_by_status, load_json_list
@@ -13,6 +16,25 @@ def safe_exists(path: Path) -> bool:
         return path.exists()
     except OSError:
         return False
+
+
+def cert_common_name(cert: x509.Certificate) -> str:
+    attributes = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+    if attributes:
+        return attributes[0].value
+    return cert.subject.rfc4514_string()
+
+
+def cert_info(path: Path) -> dict | None:
+    if not safe_exists(path):
+        return None
+    cert = load_certificate(path)
+    return {
+        "name": cert_common_name(cert),
+        "subject": cert.subject.rfc4514_string(),
+        "not_valid_after": cert.not_valid_after_utc.isoformat(),
+        "valid_until": cert.not_valid_after_utc.strftime("%d.%m.%Y %H:%M UTC"),
+    }
 
 
 def get_status(expiring_days: int = 30) -> dict:
@@ -30,21 +52,8 @@ def get_status(expiring_days: int = 30) -> dict:
         if record.get("status") != "revoked" and now <= not_after <= soon:
             warnings.append(f"Certificate {record.get('serial_number')} expires at {record.get('not_valid_after')}")
 
-    root_cert_info = None
-    if safe_exists(ROOT_CERT_PATH):
-        root_cert = load_certificate(ROOT_CERT_PATH)
-        root_cert_info = {
-            "subject": root_cert.subject.rfc4514_string(),
-            "not_valid_after": root_cert.not_valid_after_utc.isoformat(),
-        }
-
-    intermediate_cert_info = None
-    if safe_exists(INTERMEDIATE_CERT_PATH):
-        intermediate_cert = load_certificate(INTERMEDIATE_CERT_PATH)
-        intermediate_cert_info = {
-            "subject": intermediate_cert.subject.rfc4514_string(),
-            "not_valid_after": intermediate_cert.not_valid_after_utc.isoformat(),
-        }
+    root_cert_info = cert_info(ROOT_CERT_PATH)
+    intermediate_cert_info = cert_info(INTERMEDIATE_CERT_PATH)
 
     return {
         "root_ready": safe_exists(ROOT_CERT_PATH),
