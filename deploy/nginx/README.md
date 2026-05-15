@@ -1,14 +1,14 @@
-# pkica nginx setup
+# Настройка nginx для pkica
 
-Run the web server after Root CA and Intermediate CA are initialized:
+Запускайте веб-сервер после инициализации корневого и промежуточного УЦ:
 
 ```bash
 pkica web start --host pkica.local --port 8000
 ```
 
-The command issues a `server_tls` certificate from the Intermediate CA, writes TLS files to `data/web/certs/`, generates `data/web/nginx/pkica-web.conf`, starts FastAPI on `127.0.0.1:8000`, and prints manual nginx commands.
+Команда выпускает сертификат профиля `server_tls` через промежуточный УЦ, записывает TLS-файлы в `data/web/certs/`, создаёт `data/web/nginx/pkica-web.conf`, запускает FastAPI на `127.0.0.1:8000` и выводит команды для ручного подключения nginx.
 
-Manual setup:
+Ручное подключение:
 
 ```bash
 sudo cp data/web/nginx/pkica-web.conf /etc/nginx/sites-available/pkica-web.conf
@@ -17,11 +17,10 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Automatic system nginx setup is opt-in:
+Автоматическая настройка системного nginx выполняется только по явному флагу:
 
 ```bash
 pkica web start --host pkica.local --port 8000 --configure-nginx
 ```
 
-Without `--configure-nginx`, pkica does not write to `/etc/nginx`.
-
+Без `--configure-nginx` команда `pkica` не пишет в `/etc/nginx`.

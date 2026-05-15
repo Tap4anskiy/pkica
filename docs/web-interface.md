@@ -1,14 +1,14 @@
-# Web Interface
+# Веб-интерфейс
 
-Initialize Root CA and Intermediate CA first, then start the web interface:
+Сначала инициализируйте корневой и промежуточный УЦ, затем запустите веб-интерфейс:
 
 ```bash
 pkica web start --host pkica.local --port 8000
 ```
 
-`pkica web start` creates or reuses `data/web/private/pkica-web.key.pem`, generates a CSR for the selected host, issues a `server_tls` certificate through the Intermediate CA, writes `data/web/certs/pkica-web.fullchain.pem`, generates `data/web/nginx/pkica-web.conf`, and starts FastAPI on `127.0.0.1:<port>`.
+Команда `pkica web start` создаёт или переиспользует ключ `data/web/private/pkica-web.key.pem`, генерирует CSR для указанного имени хоста, выпускает сертификат профиля `server_tls` через промежуточный УЦ, записывает `data/web/certs/pkica-web.fullchain.pem`, создаёт конфигурацию `data/web/nginx/pkica-web.conf` и запускает FastAPI на `127.0.0.1:<port>`.
 
-The generated nginx config is not installed automatically unless `--configure-nginx` is passed. For manual installation:
+Сгенерированная конфигурация nginx по умолчанию не устанавливается в системный каталог. Для ручного подключения выполните:
 
 ```bash
 sudo cp data/web/nginx/pkica-web.conf /etc/nginx/sites-available/pkica-web.conf
@@ -17,15 +17,15 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-To let pkica try this step:
+Чтобы `pkica` попытался установить системную конфигурацию nginx автоматически, передайте флаг `--configure-nginx`:
 
 ```bash
 pkica web start --host pkica.local --port 8000 --configure-nginx
 ```
 
-Open `https://pkica.local/` through nginx. The portal supports CSR submission, request approval or rejection, certificate issuance, certificate revocation, CRL publication, certificate verification, and audit log viewing.
+После настройки nginx откройте `https://pkica.local/`. Через портал можно отправлять CSR-заявки, одобрять или отклонять заявки, выпускать и отзывать сертификаты, публиковать CRL, проверять сертификаты и просматривать журнал аудита.
 
-Useful commands:
+Полезные команды:
 
 ```bash
 pkica web status
@@ -33,5 +33,4 @@ pkica web stop
 pkica reset --force
 ```
 
-`pkica reset` stops the FastAPI process, removes `data/web`, and removes the system nginx site only when it was installed by pkica.
-
+Команда `pkica reset` останавливает процесс FastAPI, удаляет `data/web` и удаляет системный сайт nginx только в том случае, если он был установлен самой `pkica`.
