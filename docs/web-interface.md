@@ -8,6 +8,12 @@ pkica web start --host pkica.local --port 8000
 
 Команда `pkica web start` создаёт или переиспользует ключ `data/web/private/pkica-web.key.pem`, генерирует CSR для указанного имени хоста, выпускает сертификат профиля `server_tls` через промежуточный УЦ, записывает `data/web/certs/pkica-web.fullchain.pem`, создаёт конфигурацию `data/web/nginx/pkica-web.conf` и запускает FastAPI на `127.0.0.1:<port>`.
 
+Если приватный ключ промежуточного УЦ был создан с шифрованием, используйте флаг:
+
+```bash
+pkica web start --host pkica.local --port 8000 --intermediate-key-encrypted
+```
+
 Сгенерированная конфигурация nginx по умолчанию не устанавливается в системный каталог. Для ручного подключения выполните:
 
 ```bash

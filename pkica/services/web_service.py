@@ -58,9 +58,13 @@ def read_pid() -> int | None:
         return None
 
 
-def generate_web_certificate(host: str, days: int = 365) -> None:
+def generate_web_certificate(
+    host: str,
+    days: int = 365,
+    intermediate_password: str | None = None,
+) -> None:
     ensure_intermediate_ready()
-    intermediate_key = load_private_key(INTERMEDIATE_KEY_PATH)
+    intermediate_key = load_private_key(INTERMEDIATE_KEY_PATH, intermediate_password)
     intermediate_cert = load_certificate(INTERMEDIATE_CERT_PATH)
     root_cert = load_certificate(ROOT_CERT_PATH)
     WEB_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -141,9 +145,14 @@ def configure_system_nginx() -> tuple[bool, str]:
     return reload_result.returncode == 0, reload_result.stdout + reload_result.stderr
 
 
-def start_web(host: str = "pkica.local", port: int = 8000, configure_nginx: bool = False) -> dict:
+def start_web(
+    host: str = "pkica.local",
+    port: int = 8000,
+    configure_nginx: bool = False,
+    intermediate_password: str | None = None,
+) -> dict:
     ensure_ca_directories()
-    generate_web_certificate(host)
+    generate_web_certificate(host, intermediate_password=intermediate_password)
     write_nginx_config(host, port)
 
     pid = read_pid()

@@ -842,8 +842,17 @@ def command_status(args: argparse.Namespace) -> int:
 
 
 def command_web_start(args: argparse.Namespace) -> int:
+    intermediate_password = None
+    if args.intermediate_key_encrypted:
+        intermediate_password = getpass.getpass("Enter password for Intermediate CA private key: ")
+
     try:
-        result = start_web(host=args.host, port=args.port, configure_nginx=args.configure_nginx)
+        result = start_web(
+            host=args.host,
+            port=args.port,
+            configure_nginx=args.configure_nginx,
+            intermediate_password=intermediate_password,
+        )
         print("pkica web started.")
         print(f"URL:          {result['url']}")
         print(f"PID:          {result['pid']}")
@@ -859,6 +868,10 @@ def command_web_start(args: argparse.Namespace) -> int:
             print(f"System nginx: {result['system_nginx']['message']}")
         return 0
     except Exception as exc:
+        if str(exc) == "Password was not given but private key is encrypted":
+            print("Error: Intermediate CA private key is encrypted.")
+            print("Run: pkica web start --intermediate-key-encrypted")
+            return 1
         print(f"Error: {exc}")
         return 1
 
@@ -1180,6 +1193,11 @@ def build_parser() -> argparse.ArgumentParser:
     web_start.add_argument("--host", default="pkica.local", help="Public HTTPS host name")
     web_start.add_argument("--port", type=int, default=8000, help="Local FastAPI port")
     web_start.add_argument("--configure-nginx", action="store_true", help="Install generated config into system nginx")
+    web_start.add_argument(
+        "--intermediate-key-encrypted",
+        action="store_true",
+        help="Use if Intermediate CA private key is encrypted",
+    )
     web_start.set_defaults(func=command_web_start)
 
     web_stop = web_subparsers.add_parser("stop", help="Stop FastAPI web interface")
