@@ -70,9 +70,9 @@
     <h2>Сертификаты</h2>
     <table class="compact-table">
       <tr><th>Статус</th><th>Количество</th></tr>
-      <tr><td>active</td><td>{{ status.certificate_stats.get("issued", 0) }}</td></tr>
-      <tr><td>revoked</td><td>{{ status.certificate_stats.get("revoked", 0) }}</td></tr>
-      <tr><td>отозваны</td><td>{{ status.revocations_total }}</td></tr>
+      <tr><td>Активные</td><td>{{ status.certificate_stats.get("issued", 0) }}</td></tr>
+      <tr><td>Отозванные</td><td>{{ status.certificate_stats.get("revoked", 0) }}</td></tr>
+      <tr><td>В базе отзыва</td><td>{{ status.revocations_total }}</td></tr>
     </table>
   </article>
 
