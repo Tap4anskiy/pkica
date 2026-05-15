@@ -23,10 +23,26 @@
     <h2>Состояние цепочки</h2>
     <div class="status-list">
       <div><b>Root CA</b><span class="badge {{ 'ok' if status.root_ready else 'bad' }}">{{ "готов" if status.root_ready else "не создан" }}</span></div>
-      <p>{{ status.root_cert.subject if status.root_cert else "Сертификат Root CA не найден" }}</p>
+      <p>
+        {% if status.root_cert %}
+        {{ status.root_cert.subject }}
+        {% elif status.root_ready %}
+        Файл найден: {{ status.paths.root_cert if status.paths else "data/ca/root/certs/root.crt.pem" }}
+        {% else %}
+        Сертификат Root CA не найден
+        {% endif %}
+      </p>
       <small>Действует до: {{ status.root_cert.not_valid_after if status.root_cert else "-" }}</small>
       <div><b>Intermediate CA</b><span class="badge {{ 'ok' if status.intermediate_ready else 'bad' }}">{{ "готов" if status.intermediate_ready else "не создан" }}</span></div>
-      <p>{{ status.intermediate_cert.subject if status.intermediate_cert else "Сертификат Intermediate CA не найден" }}</p>
+      <p>
+        {% if status.intermediate_cert %}
+        {{ status.intermediate_cert.subject }}
+        {% elif status.intermediate_ready %}
+        Файл найден: {{ status.paths.intermediate_cert if status.paths else "data/ca/intermediate/certs/intermediate.crt.pem" }}
+        {% else %}
+        Сертификат Intermediate CA не найден
+        {% endif %}
+      </p>
       <small>Действует до: {{ status.intermediate_cert.not_valid_after if status.intermediate_cert else "-" }}</small>
     </div>
   </article>
