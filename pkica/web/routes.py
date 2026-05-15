@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -11,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pkica.services.audit_service import list_events
 from pkica.services.certificate_service import (
     get_certificate,
+    issue_certificate_from_csr,
     issue_certificate_from_request,
     list_certificates,
     revoke_certificate,
@@ -19,6 +21,7 @@ from pkica.services.certificate_service import (
 )
 from pkica.services.crl_service import crl_info, publish_crl
 from pkica.services.request_service import (
+    ALLOWED_PROFILES,
     approve_request,
     get_request,
     list_requests,
@@ -84,6 +87,18 @@ def certificates_for_select() -> list[dict]:
     return certificates
 
 
+def certificate_page_context(extra: dict | None = None) -> dict:
+    context = {
+        "certificates": list_certificates(),
+        "approved_requests": list_requests("approved"),
+        "profiles": sorted(ALLOWED_PROFILES),
+        "default_days": "365",
+    }
+    if extra:
+        context.update(extra)
+    return context
+
+
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
@@ -136,7 +151,62 @@ def request_issue(request_id: int) -> RedirectResponse:
 
 @router.get("/certificates", response_class=HTMLResponse)
 def certificates_list(request: Request) -> HTMLResponse:
-    return render(request, "certificates_list.html", {"certificates": list_certificates()})
+    return render(request, "certificates_list.html", certificate_page_context())
+
+
+@router.post("/certificates/issue/request")
+async def certificate_issue_from_request(request: Request) -> Response:
+    data = await form_data(request)
+    try:
+        request_id = int(data.get("request_id", "").strip())
+        days = int(data.get("days", "365").strip() or "365")
+        record = issue_certificate_from_request(request_id, days=days, source="web")
+        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+    except Exception as exc:
+        return render(
+            request,
+            "certificates_list.html",
+            certificate_page_context(
+                {
+                    "error": str(exc),
+                    "issue_request_id": data.get("request_id", ""),
+                    "issue_request_days": data.get("days", "365"),
+                }
+            ),
+            400,
+        )
+
+
+@router.post("/certificates/issue/csr")
+async def certificate_issue_from_csr(request: Request) -> Response:
+    data = await form_data(request)
+    csr_pem = data.get("csr", "")
+    profile = data.get("profile", "server_tls")
+    days_value = data.get("days", "365")
+    try:
+        days = int(days_value.strip() or "365")
+        with tempfile.NamedTemporaryFile("w", suffix=".csr.pem", delete=False, encoding="utf-8") as handle:
+            handle.write(csr_pem)
+            temp_path = Path(handle.name)
+        try:
+            record = issue_certificate_from_csr(temp_path, profile, days=days, source="web")
+        finally:
+            temp_path.unlink(missing_ok=True)
+        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+    except Exception as exc:
+        return render(
+            request,
+            "certificates_list.html",
+            certificate_page_context(
+                {
+                    "error": str(exc),
+                    "csr": csr_pem,
+                    "csr_profile": profile,
+                    "csr_days": days_value,
+                }
+            ),
+            400,
+        )
 
 
 @router.get("/certificates/{serial}", response_class=HTMLResponse)

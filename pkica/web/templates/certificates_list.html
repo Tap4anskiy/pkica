@@ -1,8 +1,91 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Сертификаты</h1>
-<table><tr><th>Serial</th><th>Subject</th><th>Профиль</th><th>Not before</th><th>Not after</th><th>Статус</th><th></th></tr>
-{% for cert in certificates %}
-<tr><td>{{ cert.serial_number }}</td><td>{{ cert.subject }}</td><td>{{ cert.profile }}</td><td>{{ cert.not_valid_before|datetime }}</td><td>{{ cert.not_valid_after|datetime }}</td><td>{{ cert.display_status }}</td><td><a href="/certificates/{{ cert.serial_number }}">Открыть</a></td></tr>
-{% endfor %}</table>
+<div class="page-head">
+  <div>
+    <h1>Сертификаты</h1>
+    <p>Выпуск, просмотр и контроль выданных сертификатов Intermediate CA.</p>
+  </div>
+</div>
+
+<section class="issue-grid">
+  <div class="panel issue-panel">
+    <h2>Выпустить по одобренной заявке</h2>
+    <form class="stack" method="post" action="/certificates/issue/request">
+      <label>ID заявки
+        <input name="request_id" inputmode="numeric" list="approved-request-ids" value="{{ issue_request_id or '' }}" placeholder="Например: 12" required>
+      </label>
+      <datalist id="approved-request-ids">
+        {% for item in approved_requests %}
+        <option value="{{ item.id }}">{{ item.cn or item.subject }} / {{ item.profile }}</option>
+        {% endfor %}
+      </datalist>
+      <label>Срок действия, дней
+        <input name="days" inputmode="numeric" value="{{ issue_request_days or default_days }}" required>
+      </label>
+      <button>Выпустить сертификат</button>
+    </form>
+    {% if approved_requests %}
+    <div class="mini-list">
+      <strong>Одобренные заявки</strong>
+      {% for item in approved_requests %}
+      <a href="/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Одобренных заявок пока нет.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel issue-panel">
+    <h2>Выпустить напрямую из CSR</h2>
+    <form class="stack" method="post" action="/certificates/issue/csr">
+      <label>Профиль
+        <select name="profile">
+          {% for profile in profiles %}
+          <option value="{{ profile }}" {% if (csr_profile or "server_tls") == profile %}selected{% endif %}>{{ profile }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Срок действия, дней
+        <input name="days" inputmode="numeric" value="{{ csr_days or default_days }}" required>
+      </label>
+      <label>CSR PEM
+        <textarea name="csr" rows="9" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>
+      </label>
+      <button>Выпустить из CSR</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Реестр сертификатов</h2>
+  {% if certificates %}
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th>Serial</th>
+        <th>Subject</th>
+        <th>Профиль</th>
+        <th>Начало</th>
+        <th>Окончание</th>
+        <th>Статус</th>
+        <th></th>
+      </tr>
+      {% for cert in certificates %}
+      <tr>
+        <td><code>{{ cert.serial_number }}</code></td>
+        <td>{{ cert.subject }}</td>
+        <td>{{ cert.profile }}</td>
+        <td>{{ cert.not_valid_before|datetime }}</td>
+        <td>{{ cert.not_valid_after|datetime }}</td>
+        <td><span class="status-pill {{ cert.display_status }}">{{ cert.display_status }}</span></td>
+        <td><a href="/certificates/{{ cert.serial_number }}">Открыть</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Сертификаты пока не выпускались.</p>
+  {% endif %}
+</section>
 {% endblock %}
