@@ -5,6 +5,10 @@
     <h1>Сертификаты</h1>
     <p>Выпуск, просмотр и контроль выданных сертификатов Intermediate CA.</p>
   </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/requests/new">Новая CSR</a>
+    <a class="button-link secondary" href="/verify">Проверить сертификат</a>
+  </div>
 </div>
 
 <section class="panel issue-panel">
@@ -64,7 +68,10 @@
 </section>
 
 <section class="panel">
-  <h2>Реестр сертификатов</h2>
+  <div class="section-head">
+    <h2>Реестр сертификатов</h2>
+    <span class="muted">{{ certificates|length }} шт.</span>
+  </div>
   {% if certificates %}
   <div class="table-wrap">
     <table>

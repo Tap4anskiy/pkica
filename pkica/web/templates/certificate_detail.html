@@ -11,17 +11,87 @@
   "privilegeWithdrawn",
   "aaCompromise"
 ], true) %}
-<h1>Сертификат {{ cert.serial_number }}</h1>
-<dl><dt>Subject</dt><dd>{{ cert.subject }}</dd><dt>Issuer</dt><dd>{{ cert.issuer }}</dd><dt>SAN</dt><dd>{{ cert.san }}</dd><dt>EKU</dt><dd>{{ cert.eku }}</dd><dt>Срок</dt><dd>{{ cert.not_valid_before|datetime }} - {{ cert.not_valid_after|datetime }}</dd><dt>PEM</dt><dd>{{ cert.cert_path }}</dd><dt>Статус</dt><dd>{{ cert.status }}</dd><dt>Проверка</dt><dd>{{ "OK" if verification.ok else verification.error }}</dd></dl>
-{% if cert.status != "revoked" %}
-<form class="revoke-form" method="post" action="/certificates/{{ cert.serial_number }}/revoke" onsubmit="return confirm('Отозвать сертификат?')">
-  <label for="revoke-reason">Причина отзыва</label>
-  <select id="revoke-reason" name="reason">
-    {% for reason in reasons %}
-    <option value="{{ reason }}">{{ reason }}</option>
-    {% endfor %}
-  </select>
-  <button class="danger">Отозвать</button>
-</form>
-{% endif %}
+<div class="page-head">
+  <div>
+    <h1>{{ cert.subject_cn or "Сертификат" }}</h1>
+    <p><code>{{ cert.serial_number }}</code></p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/certificates">К списку</a>
+    <a class="button-link secondary" href="/verify">Проверить другой</a>
+  </div>
+</div>
+
+<section class="cert-summary">
+  <div class="summary-item">
+    <span>Статус</span>
+    <strong><span class="status-pill {{ cert.status }}">{{ cert.status }}</span></strong>
+  </div>
+  <div class="summary-item">
+    <span>Проверка цепочки</span>
+    <strong><span class="badge {{ 'ok' if verification.ok else 'bad' }}">{{ "OK" if verification.ok else "ошибка" }}</span></strong>
+  </div>
+  <div class="summary-item">
+    <span>Профиль</span>
+    <strong>{{ cert.profile }}</strong>
+  </div>
+  <div class="summary-item">
+    <span>Действует до</span>
+    <strong>{{ cert.not_valid_after|datetime }}</strong>
+  </div>
+</section>
+
+<section class="certificate-layout">
+  <article class="panel cert-main">
+    <h2>Параметры сертификата</h2>
+    <dl class="detail-list">
+      <dt>Subject</dt>
+      <dd>{{ cert.subject }}</dd>
+      <dt>Issuer</dt>
+      <dd>{{ cert.issuer }}</dd>
+      <dt>SAN</dt>
+      <dd>{{ cert.san or "-" }}</dd>
+      <dt>EKU</dt>
+      <dd>{{ cert.eku or "-" }}</dd>
+      <dt>Начало действия</dt>
+      <dd>{{ cert.not_valid_before|datetime }}</dd>
+      <dt>Окончание</dt>
+      <dd>{{ cert.not_valid_after|datetime }}</dd>
+      <dt>PEM-файл</dt>
+      <dd><code>{{ cert.cert_path }}</code></dd>
+      {% if cert.fullchain_path %}
+      <dt>Fullchain</dt>
+      <dd><code>{{ cert.fullchain_path }}</code></dd>
+      {% endif %}
+    </dl>
+  </article>
+
+  <aside class="panel cert-side">
+    <h2>Управление</h2>
+    {% if verification.ok %}
+    <p class="state-note ok">Цепочка доверия проверена. Сертификат можно использовать, пока он не истек и не отозван.</p>
+    {% else %}
+    <p class="state-note bad">Проверка не прошла: {{ verification.error }}</p>
+    {% endif %}
+
+    {% if cert.status != "revoked" %}
+    <div class="danger-zone">
+      <h3>Отзыв сертификата</h3>
+      <p>Отзыв пометит сертификат как недействительный и добавит его в базу отозванных. После этого опубликуйте CRL.</p>
+      <form class="revoke-form" method="post" action="/certificates/{{ cert.serial_number }}/revoke" onsubmit="return confirm('Отозвать сертификат {{ cert.serial_number }}?')">
+        <label for="revoke-reason">Причина отзыва</label>
+        <select id="revoke-reason" name="reason">
+          {% for reason in reasons %}
+          <option value="{{ reason }}">{{ reason }}</option>
+          {% endfor %}
+        </select>
+        <button class="danger">Отозвать сертификат</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="state-note bad">Сертификат уже отозван{% if cert.revoked_at %}: {{ cert.revoked_at|datetime }}{% endif %}.</p>
+    <a class="button-link secondary" href="/crl">Открыть CRL</a>
+    {% endif %}
+  </aside>
+</section>
 {% endblock %}

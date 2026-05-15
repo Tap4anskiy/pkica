@@ -1,20 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Проверка сертификата</h1>
-<form method="post" action="/verify" class="stack">
-  <label>Сертификат из списка
-    <select name="serial">
-      <option value="">Не выбран</option>
-      {% for cert in certificates %}
-      <option value="{{ cert.serial_number }}" {% if selected_serial == cert.serial_number %}selected{% endif %}>
-        {{ cert.label }} / {{ cert.profile }} / {{ cert.display_status }} / {{ cert.serial_number }}
-      </option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>PEM<textarea name="pem" rows="12">{{ pem or "" }}</textarea></label>
-  <label>или путь внутри стенда<input name="path" value="{{ path or "" }}"></label>
-  <button>Проверить</button>
-</form>
-{% if result %}<h2>Результат</h2><pre>{{ result }}</pre>{% endif %}
+<div class="page-head">
+  <div>
+    <h1>Проверка сертификата</h1>
+    <p>Проверьте цепочку доверия, срок действия и статус отзыва.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/certificates">Сертификаты</a>
+  </div>
+</div>
+
+<section class="content-layout">
+  <article class="panel content-main">
+    <h2>Источник сертификата</h2>
+    <form method="post" action="/verify" class="stack">
+      <label>Сертификат из списка
+        <select name="serial">
+          <option value="">Не выбран</option>
+          {% for cert in certificates %}
+          <option value="{{ cert.serial_number }}" {% if selected_serial == cert.serial_number %}selected{% endif %}>
+            {{ cert.label }} / {{ cert.profile }} / {{ cert.display_status }} / {{ cert.serial_number }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>PEM
+        <textarea name="pem" rows="12" placeholder="-----BEGIN CERTIFICATE-----">{{ pem or "" }}</textarea>
+      </label>
+      <label>или путь внутри стенда
+        <input name="path" value="{{ path or "" }}" placeholder="data/issued/example.crt.pem">
+      </label>
+      <button>Проверить</button>
+    </form>
+  </article>
+
+  <aside class="panel content-side">
+    <h2>Что будет проверено</h2>
+    <ul class="check-list">
+      <li>подпись Intermediate CA;</li>
+      <li>цепочка до Root CA;</li>
+      <li>срок действия сертификата;</li>
+      <li>CRL, если он опубликован.</li>
+    </ul>
+  </aside>
+</section>
+
+{% if result %}
+<section class="panel">
+  <div class="section-head">
+    <h2>Результат проверки</h2>
+    <span class="badge ok">OK</span>
+  </div>
+  <pre class="result-block">{{ result }}</pre>
+</section>
+{% endif %}
 {% endblock %}

@@ -9,6 +9,7 @@ body {
   display: flex;
   gap: 18px;
   align-items: center;
+  flex-wrap: wrap;
   background: #17202a;
   padding: 14px 24px;
 }
@@ -257,12 +258,15 @@ h2 {
 }
 
 .status-pill.issued,
-.status-pill.active {
+.status-pill.active,
+.status-pill.approved,
+.status-pill.pending {
   background: #e7f6ed;
   color: #17663a;
 }
 
-.status-pill.revoked {
+.status-pill.revoked,
+.status-pill.rejected {
   background: #fde7e7;
   color: #8a1f17;
 }
@@ -298,6 +302,142 @@ h2 {
 .warnings {
   border-color: #f5c46b;
   background: #fffaf0;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  margin-bottom: 0;
+}
+
+.cert-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-item {
+  background: #fff;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.summary-item span {
+  display: block;
+  color: #667085;
+}
+
+.summary-item strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.certificate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+}
+
+.cert-main,
+.cert-side,
+.content-main,
+.content-side {
+  align-self: start;
+}
+
+.detail-list {
+  grid-template-columns: 150px 1fr;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.detail-list dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.state-note {
+  border-radius: 8px;
+  margin: 0 0 14px;
+  padding: 12px;
+}
+
+.state-note.ok {
+  background: #e7f6ed;
+  color: #17663a;
+}
+
+.state-note.bad {
+  background: #fde7e7;
+  color: #8a1f17;
+}
+
+.danger-zone {
+  border: 1px solid #f3b8b3;
+  border-radius: 8px;
+  background: #fff8f7;
+  padding: 14px;
+}
+
+.danger-zone h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.danger-zone p {
+  margin: 0 0 12px;
+  color: #6b3a35;
+}
+
+.check-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: #344054;
+}
+
+.filter-toolbar {
+  margin: 0;
+}
+
+.filter-toolbar label {
+  min-width: 240px;
+  font-weight: 700;
+}
+
+.filter-toolbar select {
+  margin-top: 5px;
+  font-weight: 400;
+}
+
+.action-stack {
+  margin-bottom: 14px;
+}
+
+.result-block {
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  background: #fbfcfe;
+  margin: 0;
+  padding: 14px;
 }
 
 .table-wrap {
@@ -428,12 +568,25 @@ pre {
   }
 
   .dashboard-grid,
-  .issue-grid {
+  .issue-grid,
+  .certificate-layout,
+  .content-layout {
     grid-template-columns: 1fr;
   }
 
+  .section-head,
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-toolbar label {
+    min-width: 0;
+  }
+
   .plain-list,
-  .chain-details {
+  .chain-details,
+  .detail-list {
     grid-template-columns: 1fr;
   }
 

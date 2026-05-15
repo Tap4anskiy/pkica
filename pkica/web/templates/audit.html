@@ -1,7 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Аудит</h1>
-<table><tr><th>Время</th><th>Действие</th><th>Результат</th><th>Детали</th></tr>
-{% for event in events %}<tr><td>{{ event.timestamp|datetime }}</td><td>{{ event.action }}</td><td>{{ event.result or "-" }}</td><td><code>{{ event }}</code></td></tr>{% endfor %}
-</table>
+<div class="page-head">
+  <div>
+    <h1>Аудит</h1>
+    <p>Последние операции CLI и web-интерфейса из общего журнала.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="section-head">
+    <h2>События</h2>
+    <span class="muted">{{ events|length }} последних</span>
+  </div>
+  {% if events %}
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th>Время</th>
+        <th>Действие</th>
+        <th>Результат</th>
+        <th>Детали</th>
+      </tr>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.timestamp|datetime }}</td>
+        <td><code>{{ event.action }}</code></td>
+        <td>{{ event.result or "-" }}</td>
+        <td><code>{{ event }}</code></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">В журнале пока нет событий.</p>
+  {% endif %}
+</section>
 {% endblock %}
