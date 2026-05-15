@@ -12,10 +12,12 @@ def now_iso() -> str:
 
 
 def load_revocations(db_path: Path) -> list[dict]:
-    if not db_path.exists():
+    try:
+        if not db_path.exists():
+            return []
+        return json.loads(db_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
         return []
-
-    return json.loads(db_path.read_text(encoding="utf-8"))
 
 
 def save_revocations(db_path: Path, records: list[dict]) -> None:

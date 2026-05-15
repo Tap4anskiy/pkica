@@ -5,10 +5,12 @@ from pathlib import Path
 
 
 def load_json_list(path: Path) -> list[dict]:
-    if not path.exists():
+    try:
+        if not path.exists():
+            return []
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
         return []
-
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def count_by_status(records: list[dict]) -> dict[str, int]:

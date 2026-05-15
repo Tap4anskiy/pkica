@@ -27,6 +27,8 @@ from pkica.services.request_service import (
 )
 from pkica.services.status_service import get_status
 from pkica.pki.crl import REASON_MAP
+from pkica.config import INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
+from pkica.pki.ca import load_certificate
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
@@ -42,9 +44,30 @@ def render(request: Request, name: str, context: dict | None = None, status_code
     return templates.TemplateResponse(request, name, context or {}, status_code=status_code)
 
 
+def cert_summary(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    try:
+        cert = load_certificate(path)
+    except Exception:
+        return None
+    return {
+        "subject": cert.subject.rfc4514_string(),
+        "not_valid_after": cert.not_valid_after_utc.isoformat(),
+    }
+
+
+def enrich_dashboard_status(status: dict) -> dict:
+    if status.get("root_ready") and not status.get("root_cert"):
+        status["root_cert"] = cert_summary(ROOT_CERT_PATH)
+    if status.get("intermediate_ready") and not status.get("intermediate_cert"):
+        status["intermediate_cert"] = cert_summary(INTERMEDIATE_CERT_PATH)
+    return status
+
+
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
-    return render(request, "dashboard.html", {"status": get_status(), "crl": crl_info()})
+    return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
 
 
 @router.get("/requests", response_class=HTMLResponse)
