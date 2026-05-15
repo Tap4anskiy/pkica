@@ -16,7 +16,7 @@ pkica web start --host pkica.local --port 8000
 sudo cp data/web/nginx/pkica-web.conf /etc/nginx/sites-available/pkica-web.conf
 sudo ln -sf /etc/nginx/sites-available/pkica-web.conf /etc/nginx/sites-enabled/pkica-web.conf
 sudo nginx -t
-sudo systemctl reload nginx
+sudo systemctl restart nginx
 ```
 
 Автоматическая настройка системного nginx выполняется только по явному флагу:
