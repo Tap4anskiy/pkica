@@ -139,7 +139,7 @@ def configure_system_nginx() -> tuple[bool, str]:
     log_event("web.nginx.test", result="success" if test.returncode == 0 else "failed", output=(test.stdout + test.stderr)[-500:])
     if test.returncode != 0:
         return False, test.stdout + test.stderr
-    reload_cmd = ["systemctl", "reload", "nginx"] if shutil.which("systemctl") else ["nginx", "-s", "reload"]
+    reload_cmd = ["systemctl", "restart", "nginx"] if shutil.which("systemctl") else ["nginx", "-s", "reload"]
     reload_result = subprocess.run(reload_cmd, text=True, capture_output=True, check=False)
     log_event("web.nginx.reload", result="success" if reload_result.returncode == 0 else "failed")
     return reload_result.returncode == 0, reload_result.stdout + reload_result.stderr

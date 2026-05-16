@@ -863,7 +863,7 @@ def command_web_start(args: argparse.Namespace) -> int:
             print(f"sudo cp {result['nginx_conf']} /etc/nginx/sites-available/pkica-web.conf")
             print("sudo ln -sf /etc/nginx/sites-available/pkica-web.conf /etc/nginx/sites-enabled/pkica-web.conf")
             print("sudo nginx -t")
-            print("sudo systemctl reload nginx")
+            print("sudo systemctl restart nginx")
         else:
             print(f"System nginx: {result['system_nginx']['message']}")
         return 0
