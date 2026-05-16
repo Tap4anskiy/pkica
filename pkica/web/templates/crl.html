@@ -12,14 +12,28 @@
   </div>
 </div>
 
+{% if crl.crl_outdated %}
+<div class="alert warning">
+  {% if crl.exists %}
+  В базе отзыва {{ crl.revoked_count }} сертификатов, а в опубликованном CRL {{ crl.published_revoked_count }}. Опубликуйте CRL, чтобы клиенты получили актуальный список отзыва.
+  {% else %}
+  В базе отзыва {{ crl.revoked_count }} сертификатов, но CRL еще не опубликован.
+  {% endif %}
+</div>
+{% endif %}
+
 <section class="cert-summary">
   <div class="summary-item">
     <span>Состояние</span>
-    <strong><span class="badge {{ 'ok' if crl.exists else 'bad' }}">{{ "опубликован" if crl.exists else "не опубликован" }}</span></strong>
+    <strong><span class="badge {{ 'bad' if crl.crl_outdated else 'ok' }}">{{ "требует публикации" if crl.crl_outdated else "актуален" }}</span></strong>
   </div>
   <div class="summary-item">
-    <span>Отозвано</span>
-    <strong>{{ crl.revoked|length }}</strong>
+    <span>В базе отзыва</span>
+    <strong>{{ crl.revoked_count }}</strong>
+  </div>
+  <div class="summary-item">
+    <span>В опубликованном CRL</span>
+    <strong>{{ crl.published_revoked_count }}</strong>
   </div>
   <div class="summary-item">
     <span>Обновлен</span>
@@ -39,6 +53,10 @@
       <dd><code>{{ crl.path }}</code></dd>
       <dt>Опубликован</dt>
       <dd>{{ "да" if crl.exists else "нет" }}</dd>
+      <dt>Записей в базе</dt>
+      <dd>{{ crl.revoked_count }}</dd>
+      <dt>Записей в CRL</dt>
+      <dd>{{ crl.published_revoked_count }}</dd>
       <dt>Последнее обновление</dt>
       <dd>{{ crl.last_update|datetime }}</dd>
       <dt>Следующее обновление</dt>
@@ -48,7 +66,11 @@
 
   <aside class="panel cert-side">
     <h2>Управление</h2>
-    <p class="state-note ok">После отзыва сертификатов публикуйте CRL, чтобы клиенты увидели актуальный список недействительных serial number.</p>
+    {% if crl.crl_outdated %}
+    <p class="state-note bad">Опубликованный CRL отстает от базы отзыва. Нужна публикация.</p>
+    {% else %}
+    <p class="state-note ok">Опубликованный CRL соответствует базе отзыва.</p>
+    {% endif %}
     <form method="post" action="/crl/publish">
       <button>Опубликовать CRL</button>
     </form>

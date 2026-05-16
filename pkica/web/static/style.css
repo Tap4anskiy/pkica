@@ -538,6 +538,11 @@ button {
   color: #8a1f17;
 }
 
+.warning {
+  background: #fff4d6;
+  color: #7a4b00;
+}
+
 dl {
   display: grid;
   grid-template-columns: 180px 1fr;

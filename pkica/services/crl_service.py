@@ -24,10 +24,22 @@ def publish_crl(days: int = 7, *, source: str = "service") -> dict:
 
 def crl_info() -> dict:
     revoked = load_revocations(REVOKED_DB_PATH)
-    info = {"path": str(CRL_PATH), "exists": CRL_PATH.exists(), "revoked": revoked, "last_update": None, "next_update": None}
+    info = {
+        "path": str(CRL_PATH),
+        "exists": CRL_PATH.exists(),
+        "revoked": revoked,
+        "revoked_count": len(revoked),
+        "published_revoked_count": 0,
+        "crl_outdated": False,
+        "last_update": None,
+        "next_update": None,
+    }
     if CRL_PATH.exists():
         crl = load_crl(CRL_PATH)
         info["last_update"] = crl.last_update_utc.isoformat()
         info["next_update"] = crl.next_update_utc.isoformat()
+        info["published_revoked_count"] = len(list(crl))
+        info["crl_outdated"] = info["revoked_count"] > info["published_revoked_count"]
+    elif revoked:
+        info["crl_outdated"] = True
     return info
-
