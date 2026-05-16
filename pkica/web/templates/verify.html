@@ -49,9 +49,42 @@
 <section class="panel">
   <div class="section-head">
     <h2>Результат проверки</h2>
-    <span class="badge ok">OK</span>
+    <span class="badge {{ 'ok' if result.chain_valid and not result.revoked else 'bad' }}">
+      {{ "OK" if result.chain_valid and not result.revoked else "ошибка" }}
+    </span>
   </div>
-  <pre class="result-block">{{ result }}</pre>
+  <div class="verify-summary">
+    <div class="summary-item">
+      <span>Цепочка доверия</span>
+      <strong>
+        <span class="badge {{ 'ok' if result.chain_valid else 'bad' }}">
+          {{ "проверена" if result.chain_valid else "ошибка" }}
+        </span>
+      </strong>
+    </div>
+    <div class="summary-item">
+      <span>Статус отзыва</span>
+      <strong>
+        <span class="badge {{ 'bad' if result.revoked else 'ok' }}">
+          {{ "отозван" if result.revoked else "не отозван" }}
+        </span>
+      </strong>
+    </div>
+    <div class="summary-item">
+      <span>CRL</span>
+      <strong>{{ "проверен" if result.crl_checked else "не опубликован" }}</strong>
+    </div>
+  </div>
+  <dl class="detail-list verify-result">
+    <dt>Serial Number</dt>
+    <dd><code>{{ result.serial_number }}</code></dd>
+    <dt>Subject</dt>
+    <dd>{{ result.subject }}</dd>
+    <dt>Issuer</dt>
+    <dd>{{ result.issuer }}</dd>
+    <dt>Trust Chain</dt>
+    <dd>{{ result.trust_chain }}</dd>
+  </dl>
 </section>
 {% endif %}
 {% endblock %}

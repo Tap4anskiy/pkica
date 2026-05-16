@@ -328,6 +328,13 @@ h2 {
   margin-bottom: 16px;
 }
 
+.verify-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .summary-item {
   background: #fff;
   border: 1px solid #dfe5ee;
@@ -376,6 +383,10 @@ h2 {
 .detail-list dd {
   margin: 0;
   word-break: break-word;
+}
+
+.verify-result {
+  grid-template-columns: 140px 1fr;
 }
 
 .state-note {
