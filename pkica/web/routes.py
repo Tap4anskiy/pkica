@@ -89,7 +89,8 @@ def certificates_for_select() -> list[dict]:
 
 def certificate_page_context(extra: dict | None = None) -> dict:
     context = {
-        "certificates": list_certificates(),
+        "certificates": prepare_certificate_registry(),
+        "certificate_registry": certificate_registry_options(),
         "approved_requests": list_requests("approved"),
         "profiles": sorted(ALLOWED_PROFILES),
         "default_days": "365",
@@ -97,6 +98,67 @@ def certificate_page_context(extra: dict | None = None) -> dict:
     if extra:
         context.update(extra)
     return context
+
+
+def certificate_sort_value(cert: dict, sort_by: str) -> object:
+    if sort_by in {"not_valid_before", "not_valid_after"}:
+        try:
+            return datetime.fromisoformat(str(cert.get(sort_by, "")))
+        except ValueError:
+            return datetime.min.replace(tzinfo=timezone.utc)
+    return str(cert.get(sort_by, "")).lower()
+
+
+def sort_certificates(certificates: list[dict], sort_value: str) -> list[dict]:
+    sort_map = {
+        "issued_desc": ("not_valid_before", True),
+        "issued_asc": ("not_valid_before", False),
+        "expires_asc": ("not_valid_after", False),
+        "expires_desc": ("not_valid_after", True),
+        "subject_asc": ("subject", False),
+        "profile_asc": ("profile", False),
+        "status_asc": ("display_status", False),
+        "serial_asc": ("serial_number", False),
+    }
+    sort_by, reverse = sort_map.get(sort_value, sort_map["issued_desc"])
+    return sorted(certificates, key=lambda cert: certificate_sort_value(cert, sort_by), reverse=reverse)
+
+
+def certificate_registry_options(sort: str = "issued_desc", limit: str = "50") -> dict:
+    allowed_limits = {"25", "50", "100", "250", "all"}
+    allowed_sorts = {
+        "issued_desc",
+        "issued_asc",
+        "expires_asc",
+        "expires_desc",
+        "subject_asc",
+        "profile_asc",
+        "status_asc",
+        "serial_asc",
+    }
+    return {
+        "sort": sort if sort in allowed_sorts else "issued_desc",
+        "limit": limit if limit in allowed_limits else "50",
+        "limits": ["25", "50", "100", "250", "all"],
+        "sorts": [
+            ("issued_desc", "Сначала новые"),
+            ("issued_asc", "Сначала старые"),
+            ("expires_asc", "Скоро истекают"),
+            ("expires_desc", "Позже истекают"),
+            ("subject_asc", "Subject A-Z"),
+            ("profile_asc", "Профиль A-Z"),
+            ("status_asc", "Статус A-Z"),
+            ("serial_asc", "Serial A-Z"),
+        ],
+    }
+
+
+def prepare_certificate_registry(sort: str = "issued_desc", limit: str = "50") -> list[dict]:
+    options = certificate_registry_options(sort, limit)
+    certificates = sort_certificates(list_certificates(), options["sort"])
+    if options["limit"] == "all":
+        return certificates
+    return certificates[: int(options["limit"])]
 
 
 def certificate_detail_context(serial: str, extra: dict | None = None) -> dict:
@@ -277,8 +339,17 @@ def request_issue(request: Request, request_id: int) -> Response:
 
 
 @router.get("/certificates", response_class=HTMLResponse)
-def certificates_list(request: Request) -> HTMLResponse:
-    return render(request, "certificates_list.html", certificate_page_context())
+def certificates_list(request: Request, sort: str = "issued_desc", limit: str = "50") -> HTMLResponse:
+    return render(
+        request,
+        "certificates_list.html",
+        certificate_page_context(
+            {
+                "certificates": prepare_certificate_registry(sort, limit),
+                "certificate_registry": certificate_registry_options(sort, limit),
+            }
+        ),
+    )
 
 
 @router.post("/certificates/issue/request")

@@ -71,8 +71,27 @@
 <section class="panel">
   <div class="section-head">
     <h2>Реестр сертификатов</h2>
-    <span class="muted">{{ certificates|length }} шт.</span>
+    <span class="muted">{{ certificates|length }} отображается</span>
   </div>
+  <form class="registry-controls" method="get" action="/certificates">
+    <label>Сортировка
+      <select name="sort">
+        {% for value, label in certificate_registry.sorts %}
+        <option value="{{ value }}" {% if certificate_registry.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Показать
+      <select name="limit">
+        {% for value in certificate_registry.limits %}
+        <option value="{{ value }}" {% if certificate_registry.limit == value %}selected{% endif %}>
+          {{ "Все" if value == "all" else value }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <button>Применить</button>
+  </form>
   {% if certificates %}
   <div class="table-wrap">
     <table>

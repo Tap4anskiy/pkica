@@ -444,6 +444,24 @@ h2 {
   font-weight: 400;
 }
 
+.registry-controls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.registry-controls label {
+  min-width: 180px;
+  font-weight: 700;
+}
+
+.registry-controls select {
+  margin-top: 5px;
+  font-weight: 400;
+}
+
 .action-stack {
   margin-bottom: 14px;
 }
@@ -728,6 +746,11 @@ pre {
 
   .filter-toolbar label {
     min-width: 0;
+  }
+
+  .registry-controls label,
+  .registry-controls button {
+    width: 100%;
   }
 
   .plain-list,

@@ -29,6 +29,7 @@ from pkica.pki.keys import generate_private_key, save_private_key
 from pkica.services import audit_service
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_status
+from pkica.web import routes
 from pkica.web.routes import stand_certificate_path
 
 
@@ -147,3 +148,23 @@ def test_old_revoked_web_record_does_not_block_current_certificate(
     save_issued_records(ISSUED_DB_PATH, [old_record, current_record])
 
     assert web_certificate_status("pkica.local")["usable"] is True
+
+
+def test_certificate_registry_sort_and_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    records = []
+    for index in range(26):
+        records.append(
+            {
+                "serial_number": f"{index:02x}",
+                "subject": f"CN=cert-{25 - index:02d}",
+                "profile": "server_tls",
+                "display_status": "active",
+                "not_valid_before": f"2026-01-{index + 1:02d}T00:00:00+00:00",
+                "not_valid_after": "2026-06-01T00:00:00+00:00",
+            }
+        )
+    monkeypatch.setattr(routes, "list_certificates", lambda: records)
+
+    assert len(routes.prepare_certificate_registry("issued_desc", "25")) == 25
+    assert routes.prepare_certificate_registry("issued_desc", "25")[0]["serial_number"] == "19"
+    assert routes.prepare_certificate_registry("subject_asc", "all")[0]["subject"] == "CN=cert-00"
