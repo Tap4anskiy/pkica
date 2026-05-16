@@ -448,12 +448,13 @@ h2 {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: 14px;
 }
 
 .registry-controls label {
   display: inline-flex;
+  flex: 0 0 auto;
   gap: 8px;
   align-items: center;
   font-weight: 700;
@@ -468,6 +469,7 @@ h2 {
 }
 
 .registry-controls select {
+  width: auto;
   font-weight: 400;
 }
 
@@ -759,20 +761,6 @@ pre {
 
   .filter-toolbar label {
     min-width: 0;
-  }
-
-  .registry-controls {
-    align-items: stretch;
-  }
-
-  .registry-controls label,
-  .registry-controls button {
-    width: 100%;
-  }
-
-  .registry-controls label:first-child select,
-  .registry-controls label:nth-child(2) select {
-    width: 100%;
   }
 
   .plain-list,
