@@ -81,6 +81,11 @@ h2 {
   padding: 16px;
 }
 
+.metric.needs-action {
+  border-color: #f5c46b;
+  background: #fffaf0;
+}
+
 .metric span,
 .metric a {
   display: block;

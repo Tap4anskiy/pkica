@@ -13,9 +13,9 @@
 
 <section class="metrics-grid">
   <div class="metric"><span>Ожидают решения</span><strong>{{ status.request_stats.get("pending", 0) }}</strong><a href="/requests?status=pending">Открыть заявки</a></div>
-  <div class="metric"><span>Выпущено</span><strong>{{ status.certificate_stats.get("issued", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
-  <div class="metric"><span>Отозвано</span><strong>{{ status.certificate_stats.get("revoked", 0) }}</strong><a href="/crl">CRL</a></div>
-  <div class="metric"><span>Всего заявок</span><strong>{{ status.requests_total }}</strong><a href="/requests">Журнал заявок</a></div>
+  <div class="metric"><span>Active</span><strong>{{ status.certificate_stats.get("issued", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
+  <div class="metric"><span>Revoked</span><strong>{{ crl.revoked_count }}</strong><a href="/crl">База отзыва</a></div>
+  <div class="metric {{ 'needs-action' if crl.crl_outdated else '' }}"><span>Published</span><strong>{{ crl.published_revoked_count }}</strong><a href="/crl">{{ "Опубликовать CRL" if crl.crl_outdated else "CRL актуален" }}</a></div>
 </section>
 
 <section class="dashboard-grid">
@@ -71,15 +71,20 @@
     <table class="compact-table">
       <tr><th>Статус</th><th>Количество</th></tr>
       <tr><td>Active</td><td>{{ status.certificate_stats.get("issued", 0) }}</td></tr>
-      <tr><td>Revoked</td><td>{{ status.certificate_stats.get("revoked", 0) }}</td></tr>
-      <tr><td>Revocation database</td><td>{{ status.revocations_total }}</td></tr>
+      <tr><td>Revoked</td><td>{{ crl.revoked_count }}</td></tr>
+      <tr><td>Published</td><td>{{ crl.published_revoked_count }}</td></tr>
     </table>
   </article>
 
   <article class="panel">
     <h2>CRL</h2>
+    {% if crl.crl_outdated %}
+    <p class="state-note bad">В базе отзыва {{ crl.revoked_count }}, в опубликованном CRL {{ crl.published_revoked_count }}.</p>
+    {% else %}
+    <p class="state-note ok">Опубликованный CRL соответствует базе отзыва.</p>
+    {% endif %}
     <dl class="plain-list">
-      <dt>Состояние</dt><dd>{{ "опубликован" if crl.exists else "не опубликован" }}</dd>
+      <dt>Состояние</dt><dd>{{ "требует публикации" if crl.crl_outdated else "актуален" }}</dd>
       <dt>Путь</dt><dd>{{ crl.path }}</dd>
       <dt>Обновлён</dt><dd>{{ crl.last_update|datetime }}</dd>
       <dt>Действует до</dt><dd>{{ crl.next_update|datetime }}</dd>
