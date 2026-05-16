@@ -74,14 +74,16 @@
     <span class="muted">{{ certificates|length }} отображается</span>
   </div>
   <form class="registry-controls" method="get" action="/certificates">
-    <label>Сортировка
+    <label>
+      <span>Сортировка</span>
       <select name="sort">
         {% for value, label in certificate_registry.sorts %}
         <option value="{{ value }}" {% if certificate_registry.sort == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>Показать
+    <label>
+      <span>Показать</span>
       <select name="limit">
         {% for value in certificate_registry.limits %}
         <option value="{{ value }}" {% if certificate_registry.limit == value %}selected{% endif %}>

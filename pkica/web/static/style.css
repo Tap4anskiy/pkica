@@ -446,20 +446,33 @@ h2 {
 
 .registry-controls {
   display: flex;
-  gap: 12px;
-  align-items: end;
+  gap: 10px;
+  align-items: center;
   flex-wrap: wrap;
   margin-bottom: 14px;
 }
 
 .registry-controls label {
-  min-width: 180px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
   font-weight: 700;
 }
 
+.registry-controls label:first-child select {
+  width: 190px;
+}
+
+.registry-controls label:nth-child(2) select {
+  width: 88px;
+}
+
 .registry-controls select {
-  margin-top: 5px;
   font-weight: 400;
+}
+
+.registry-controls button {
+  padding: 9px 12px;
 }
 
 .action-stack {
@@ -748,8 +761,17 @@ pre {
     min-width: 0;
   }
 
+  .registry-controls {
+    align-items: stretch;
+  }
+
   .registry-controls label,
   .registry-controls button {
+    width: 100%;
+  }
+
+  .registry-controls label:first-child select,
+  .registry-controls label:nth-child(2) select {
     width: 100%;
   }
 
