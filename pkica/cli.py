@@ -67,6 +67,7 @@ from pkica.storage.revocations import add_revocation, load_revocations
 from pkica.storage.status import count_by_status, load_json_list
 from pkica.pki.verify import verify_certificate_chain
 from pkica.storage.export import copy_file, write_chain
+from pkica.services.crl_service import crl_info
 from pkica.services.web_service import cleanup_web_artifacts, start_web, stop_web, web_status
 
 """Создание корневого УЦ"""
@@ -773,7 +774,7 @@ def command_reset(args: argparse.Namespace) -> int:
 def command_status(args: argparse.Namespace) -> int:
     requests = load_json_list(REQUESTS_DB_PATH)
     issued = load_json_list(ISSUED_DB_PATH)
-    revoked = load_json_list(REVOKED_DB_PATH)
+    crl = crl_info()
 
     request_stats = count_by_status(requests)
     cert_stats = count_by_status(issued)
@@ -801,10 +802,9 @@ def command_status(args: argparse.Namespace) -> int:
 
     print()
     print("Certificates")
-    print(f"Total issued:    {len(issued)}")
     print(f"Active:          {cert_stats.get('issued', 0)}")
-    print(f"Revoked:         {cert_stats.get('revoked', 0)}")
-    print(f"Revocation DB:   {len(revoked)}")
+    print(f"Revoked:         {crl['revoked_count']}")
+    print(f"Published:       {crl['published_revoked_count']}")
 
     print()
     print("Paths")
@@ -834,7 +834,8 @@ def command_status(args: argparse.Namespace) -> int:
             "crl_ready": crl_ready,
             "requests_total": len(requests),
             "certificates_total": len(issued),
-            "revocations_total": len(revoked),
+            "revocations_total": crl["revoked_count"],
+            "published_revocations_total": crl["published_revoked_count"],
         },
     )
 
