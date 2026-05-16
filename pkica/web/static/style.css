@@ -521,26 +521,63 @@ h2 {
 }
 
 .audit-object-links a,
-.audit-row-details a {
+.audit-modal a {
   color: #1166bb;
   text-decoration: none;
 }
 
-.audit-row-details summary {
+.link-button {
+  border: 0;
+  background: transparent;
   color: #1166bb;
+  padding: 0;
   cursor: pointer;
-  white-space: nowrap;
+  font: inherit;
 }
 
-.audit-row-details[open] summary {
-  margin-bottom: 10px;
+.secondary-button {
+  background: #46566b;
 }
 
-.audit-row-details .detail-list {
-  grid-template-columns: 115px minmax(0, 1fr);
-  margin-top: 10px;
-  min-width: 360px;
-  padding: 12px;
+.modal {
+  width: min(820px, calc(100vw - 40px));
+  max-height: min(720px, calc(100vh - 40px));
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  padding: 18px;
+  color: #17202a;
+  box-shadow: 0 24px 60px rgb(23 32 42 / 24%);
+}
+
+.modal::backdrop {
+  background: rgb(23 32 42 / 45%);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.modal-head p {
+  margin: 4px 0 0;
+  color: #667085;
+}
+
+.audit-modal-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.audit-modal-details {
+  grid-template-columns: 130px minmax(0, 1fr);
+  max-height: 440px;
+  margin: 0;
+  overflow: auto;
 }
 
 .table-wrap {
@@ -683,6 +720,7 @@ pre {
   }
 
   .section-head,
+  .modal-head,
   .toolbar {
     align-items: stretch;
     flex-direction: column;

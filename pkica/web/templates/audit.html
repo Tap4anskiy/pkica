@@ -94,25 +94,7 @@
         </td>
         <td>
           {% if event.detail_items %}
-          <details class="audit-row-details">
-            <summary>Показать</summary>
-            <dl class="detail-list">
-              {% for key, value in event.detail_items %}
-              <dt>{{ key }}</dt>
-              <dd>
-                {% if key == "serial_number" %}
-                <a href="/certificates/{{ value }}"><code>{{ value }}</code></a>
-                {% elif key == "request_id" %}
-                <a href="/requests/{{ value }}"><code>{{ value }}</code></a>
-                {% elif "path" in key or key in ["output", "message"] %}
-                <code>{{ value }}</code>
-                {% else %}
-                {{ value }}
-                {% endif %}
-              </dd>
-              {% endfor %}
-            </dl>
-          </details>
+          <button class="link-button" type="button" onclick="document.getElementById('audit-event-{{ loop.index }}').showModal()">Детали</button>
           {% else %}
           <span class="muted">-</span>
           {% endif %}
@@ -121,6 +103,43 @@
       {% endfor %}
     </table>
   </div>
+  {% for event in events|reverse %}
+  {% if event.detail_items %}
+  <dialog id="audit-event-{{ loop.index }}" class="modal audit-modal">
+    <div class="modal-head">
+      <div>
+        <h2>{{ event.action_label }}</h2>
+        <p>{{ event.timestamp|datetime }} · <code>{{ event.action }}</code></p>
+      </div>
+      <form method="dialog">
+        <button class="secondary-button" aria-label="Закрыть">Закрыть</button>
+      </form>
+    </div>
+    <div class="audit-modal-status">
+      <span class="badge {{ 'bad' if event.result in ['failed', 'error'] else 'ok' }}">{{ event.result or "-" }}</span>
+      {% if event.source %}
+      <span class="status-pill">{{ event.source }}</span>
+      {% endif %}
+    </div>
+    <dl class="detail-list audit-modal-details">
+      {% for key, value in event.detail_items %}
+      <dt>{{ key }}</dt>
+      <dd>
+        {% if key == "serial_number" %}
+        <a href="/certificates/{{ value }}"><code>{{ value }}</code></a>
+        {% elif key == "request_id" %}
+        <a href="/requests/{{ value }}"><code>{{ value }}</code></a>
+        {% elif "path" in key or key in ["output", "message"] %}
+        <code>{{ value }}</code>
+        {% else %}
+        {{ value }}
+        {% endif %}
+      </dd>
+      {% endfor %}
+    </dl>
+  </dialog>
+  {% endif %}
+  {% endfor %}
   {% else %}
   <p class="muted">События не найдены. Измените фильтры или сбросьте поиск.</p>
   {% endif %}
