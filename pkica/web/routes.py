@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from pkica.services.audit_service import list_events
+from pkica.services.audit_service import event_values, list_events
 from pkica.services.certificate_service import (
     get_certificate,
     issue_certificate_from_csr,
@@ -133,6 +133,79 @@ def stand_certificate_path(value: str) -> Path:
         raise ValueError("Only relative paths inside data/ are allowed.")
 
     return path
+
+
+def clamp_limit(value: int) -> int:
+    return max(25, min(value, 500))
+
+
+def audit_action_label(action: str) -> str:
+    labels = {
+        "cert.issue": "Выпуск сертификата",
+        "cert.revoke": "Отзыв сертификата",
+        "crl.publish": "Публикация CRL",
+        "req.submit": "Новая заявка",
+        "req.approve": "Заявка одобрена",
+        "req.reject": "Заявка отклонена",
+        "verify": "Проверка сертификата",
+        "web.start": "Запуск web",
+        "web.stop": "Остановка web",
+        "web.cleanup": "Очистка web",
+        "web.key.generate": "Генерация web-ключа",
+        "web.csr.generate": "Генерация web-CSR",
+        "web.cert.issue": "Выпуск web-сертификата",
+        "web.nginx.generate": "Генерация nginx",
+        "web.nginx.test": "Проверка nginx",
+        "web.nginx.reload": "Перезагрузка nginx",
+    }
+    return labels.get(action, action)
+
+
+def audit_event_tone(event: dict) -> str:
+    if event.get("result") in {"failed", "error"}:
+        return "bad"
+    action = str(event.get("action", ""))
+    if action in {"cert.revoke", "req.reject"}:
+        return "bad"
+    if action in {"cert.issue", "crl.publish", "req.approve", "web.cert.issue"}:
+        return "ok"
+    return "neutral"
+
+
+def audit_details(event: dict) -> list[tuple[str, object]]:
+    hidden_keys = {"timestamp", "action", "result"}
+    preferred = [
+        "source",
+        "serial_number",
+        "request_id",
+        "profile",
+        "reason",
+        "revoked_count",
+        "cert_path",
+        "csr_path",
+        "crl_path",
+        "host",
+        "port",
+        "pid",
+        "stopped",
+        "configure_nginx",
+        "output",
+        "message",
+    ]
+    ordered_keys = [key for key in preferred if key in event and event.get(key) not in (None, "")]
+    ordered_keys.extend(
+        key for key in event.keys() if key not in hidden_keys and key not in ordered_keys and event.get(key) not in (None, "")
+    )
+    return [(key, event[key]) for key in ordered_keys]
+
+
+def prepare_audit_event(event: dict) -> dict:
+    prepared = dict(event)
+    action = str(prepared.get("action", "raw"))
+    prepared["action_label"] = audit_action_label(action)
+    prepared["tone"] = audit_event_tone(prepared)
+    prepared["detail_items"] = audit_details(prepared)
+    return prepared
 
 
 def positive_days(value: str, default: int = 365) -> int:
@@ -290,8 +363,47 @@ def crl_publish(request: Request) -> Response:
 
 
 @router.get("/audit", response_class=HTMLResponse)
-def audit_page(request: Request, limit: int = 100) -> HTMLResponse:
-    return render(request, "audit.html", {"events": list_events(limit)})
+def audit_page(
+    request: Request,
+    limit: int = 100,
+    action: str = "",
+    source: str = "",
+    result: str = "",
+    q: str = "",
+) -> HTMLResponse:
+    limit = clamp_limit(limit)
+    action_filter = action.strip()
+    source_filter = source.strip()
+    result_filter = result.strip()
+    query_filter = q.strip()
+    recent_events = list_events(500)
+    events = [
+        prepare_audit_event(event)
+        for event in list_events(
+            limit,
+            action=action_filter or None,
+            source=source_filter or None,
+            result=result_filter or None,
+            query=query_filter or None,
+        )
+    ]
+    return render(
+        request,
+        "audit.html",
+        {
+            "events": events,
+            "actions": event_values(recent_events, "action"),
+            "sources": event_values(recent_events, "source"),
+            "results": event_values(recent_events, "result"),
+            "filters": {
+                "limit": limit,
+                "action": action_filter,
+                "source": source_filter,
+                "result": result_filter,
+                "q": query_filter,
+            },
+        },
+    )
 
 
 @router.get("/verify", response_class=HTMLResponse)
