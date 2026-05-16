@@ -6,8 +6,9 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 
-from pkica.config import CRL_PATH, INTERMEDIATE_CERT_PATH, INTERMEDIATE_KEY_PATH, ISSUED_DB_PATH, REQUESTS_DB_PATH, REVOKED_DB_PATH, ROOT_CERT_PATH, ROOT_KEY_PATH
+from pkica.config import CRL_PATH, INTERMEDIATE_CERT_PATH, INTERMEDIATE_KEY_PATH, ISSUED_DB_PATH, REQUESTS_DB_PATH, ROOT_CERT_PATH, ROOT_KEY_PATH
 from pkica.pki.ca import load_certificate
+from pkica.services.crl_service import crl_info
 from pkica.storage.status import count_by_status, load_json_list
 
 
@@ -39,7 +40,7 @@ def cert_info(path: Path) -> dict | None:
 def get_status(expiring_days: int = 30) -> dict:
     requests = load_json_list(REQUESTS_DB_PATH)
     issued = load_json_list(ISSUED_DB_PATH)
-    revoked = load_json_list(REVOKED_DB_PATH)
+    crl = crl_info()
     now = datetime.now(timezone.utc)
     soon = now + timedelta(days=expiring_days)
     warnings = []
@@ -67,7 +68,9 @@ def get_status(expiring_days: int = 30) -> dict:
         "request_stats": count_by_status(requests),
         "certificates_total": len(issued),
         "certificate_stats": count_by_status(issued),
-        "revocations_total": len(revoked),
+        "revoked_count": crl["revoked_count"],
+        "published_revoked_count": crl["published_revoked_count"],
+        "crl_outdated": crl["crl_outdated"],
         "paths": {
             "root_cert": str(ROOT_CERT_PATH) if safe_exists(ROOT_CERT_PATH) else "-",
             "intermediate_cert": str(INTERMEDIATE_CERT_PATH) if safe_exists(INTERMEDIATE_CERT_PATH) else "-",
