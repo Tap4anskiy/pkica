@@ -100,15 +100,25 @@ def web_cert_serial() -> str | None:
         return None
 
 
-def web_certificate_records() -> list[dict]:
-    serial = web_cert_serial()
+def all_web_certificate_records() -> list[dict]:
     records = load_issued_records(ISSUED_DB_PATH)
     return [
         record
         for record in records
         if record.get("purpose") == WEB_CERT_PURPOSE
         or Path(record.get("cert_path", "")) == WEB_CERT_PATH
-        or (serial is not None and record.get("serial_number", "").lower() == serial)
+    ]
+
+
+def current_web_certificate_records() -> list[dict]:
+    serial = web_cert_serial()
+    if serial is None:
+        return []
+    records = load_issued_records(ISSUED_DB_PATH)
+    return [
+        record
+        for record in records
+        if record.get("serial_number", "").lower() == serial
     ]
 
 
@@ -191,7 +201,7 @@ def web_certificate_status(host: str) -> dict:
         if is_revoked(REVOKED_DB_PATH, format(cert.serial_number, "x")):
             status["reasons"].append("web certificate is revoked")
 
-    records = web_certificate_records()
+    records = current_web_certificate_records()
     status["registered"] = bool(records)
     if any(record.get("status") == "revoked" for record in records):
         status["reasons"].append("web certificate is revoked in issued DB")
@@ -202,7 +212,7 @@ def web_certificate_status(host: str) -> dict:
 
 
 def revoke_web_certificates(reason: str = "superseded") -> None:
-    for record in web_certificate_records():
+    for record in all_web_certificate_records():
         if record.get("status") == "revoked":
             continue
         serial = record["serial_number"]

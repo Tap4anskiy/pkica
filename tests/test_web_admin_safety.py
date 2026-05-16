@@ -15,12 +15,15 @@ from pkica.config import (
     WEB_CERT_PATH,
 )
 from pkica.pki.ca import (
+    certificate_to_record,
     create_intermediate_ca_certificate,
     create_intermediate_csr,
     create_root_ca_certificate,
+    load_certificate,
     load_issued_records,
     parse_subject,
     save_certificate,
+    save_issued_records,
 )
 from pkica.pki.keys import generate_private_key, save_private_key
 from pkica.services import audit_service
@@ -120,3 +123,27 @@ def test_web_certificate_is_registered_and_reused(tmp_path: Path, monkeypatch: p
 
     assert WEB_CERT_PATH.read_bytes() == first_serial
     assert len(load_issued_records(ISSUED_DB_PATH)) == 1
+
+
+def test_old_revoked_web_record_does_not_block_current_certificate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    create_test_ca()
+    generate_web_certificate("pkica.local")
+
+    current_record = load_issued_records(ISSUED_DB_PATH)[0]
+    old_cert = load_certificate(WEB_CERT_PATH)
+    old_record = certificate_to_record(
+        old_cert,
+        "server_tls",
+        Path("data/web/certs/old-pkica-web.crt.pem"),
+        Path("data/web/certs/old-pkica-web.fullchain.pem"),
+    )
+    old_record["serial_number"] = "deadbeef"
+    old_record["purpose"] = WEB_CERT_PURPOSE
+    old_record["status"] = "revoked"
+    save_issued_records(ISSUED_DB_PATH, [old_record, current_record])
+
+    assert web_certificate_status("pkica.local")["usable"] is True
