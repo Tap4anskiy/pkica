@@ -6,7 +6,7 @@
     <p>Список отзыва Intermediate CA и публикация обновленной CRL.</p>
   </div>
   <div class="head-actions">
-    <form method="post" action="/crl/publish">
+    <form method="post" action="/crl/publish" onsubmit="return confirm('Опубликовать новый CRL?')">
       <button>Опубликовать CRL</button>
     </form>
   </div>
@@ -71,7 +71,7 @@
     {% else %}
     <p class="state-note ok">Опубликованный CRL соответствует базе отзыва.</p>
     {% endif %}
-    <form method="post" action="/crl/publish">
+    <form method="post" action="/crl/publish" onsubmit="return confirm('Опубликовать новый CRL?')">
       <button>Опубликовать CRL</button>
     </form>
   </aside>

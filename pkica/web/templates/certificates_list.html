@@ -30,7 +30,7 @@
           </select>
         </label>
         <label>Срок действия, дней
-          <input name="days" inputmode="numeric" value="{{ issue_request_days or default_days }}" required>
+          <input name="days" type="number" min="1" step="1" value="{{ issue_request_days or default_days }}" required>
         </label>
         <button>Выпустить сертификат</button>
       </form>
@@ -47,7 +47,8 @@
     </div>
 
     <div class="issue-mode issue-mode-csr">
-      <form class="stack" method="post" action="/certificates/issue/csr">
+      <p class="state-note bad">Админский выпуск напрямую из CSR обходит очередь заявок. Используйте его только для ручных операций.</p>
+      <form class="stack" method="post" action="/certificates/issue/csr" onsubmit="return confirm('Выпустить сертификат напрямую из CSR?')">
         <label>Профиль
           <select name="profile">
             {% for profile in profiles %}
@@ -56,7 +57,7 @@
           </select>
         </label>
         <label>Срок действия, дней
-          <input name="days" inputmode="numeric" value="{{ csr_days or default_days }}" required>
+          <input name="days" type="number" min="1" step="1" value="{{ csr_days or default_days }}" required>
         </label>
         <label>CSR PEM
           <textarea name="csr" rows="9" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>

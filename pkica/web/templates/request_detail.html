@@ -59,7 +59,7 @@
     <h2>Управление</h2>
     {% if item.status == "pending" %}
     <p class="state-note ok">Заявка ожидает решения. После одобрения можно выпустить сертификат.</p>
-    <form class="stack action-stack" method="post" action="/requests/{{ item.id }}/approve">
+    <form class="stack action-stack" method="post" action="/requests/{{ item.id }}/approve" onsubmit="return confirm('Одобрить заявку #{{ item.id }}?')">
       <button>Одобрить заявку</button>
     </form>
     <div class="danger-zone">
@@ -73,7 +73,7 @@
     </div>
     {% elif item.status == "approved" %}
     <p class="state-note ok">Заявка одобрена и готова к выпуску сертификата.</p>
-    <form class="stack action-stack" method="post" action="/requests/{{ item.id }}/issue">
+    <form class="stack action-stack" method="post" action="/requests/{{ item.id }}/issue" onsubmit="return confirm('Выпустить сертификат по заявке #{{ item.id }}?')">
       <button>Выпустить сертификат</button>
     </form>
     {% elif item.status == "issued" %}

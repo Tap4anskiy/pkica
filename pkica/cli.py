@@ -67,6 +67,7 @@ from pkica.storage.revocations import add_revocation, load_revocations
 from pkica.storage.status import count_by_status, load_json_list
 from pkica.pki.verify import verify_certificate_chain
 from pkica.storage.export import copy_file, write_chain
+from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
 from pkica.services.web_service import cleanup_web_artifacts, start_web, stop_web, web_status
 
@@ -777,7 +778,7 @@ def command_status(args: argparse.Namespace) -> int:
     crl = crl_info()
 
     request_stats = count_by_status(requests)
-    cert_stats = count_by_status(issued)
+    cert_stats = certificate_status_counts(issued)
 
     root_ready = ROOT_CERT_PATH.exists()
     root_key_present = ROOT_KEY_PATH.exists()
@@ -802,7 +803,7 @@ def command_status(args: argparse.Namespace) -> int:
 
     print()
     print("Certificates")
-    print(f"Active:          {cert_stats.get('issued', 0)}")
+    print(f"Active:          {cert_stats.get('active', 0)}")
     print(f"Revoked:         {crl['revoked_count']}")
     print(f"Published:       {crl['published_revoked_count']}")
 

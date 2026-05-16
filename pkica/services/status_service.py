@@ -8,6 +8,7 @@ from cryptography.x509.oid import NameOID
 
 from pkica.config import CRL_PATH, INTERMEDIATE_CERT_PATH, INTERMEDIATE_KEY_PATH, ISSUED_DB_PATH, REQUESTS_DB_PATH, ROOT_CERT_PATH, ROOT_KEY_PATH
 from pkica.pki.ca import load_certificate
+from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
 from pkica.storage.status import count_by_status, load_json_list
 
@@ -67,7 +68,7 @@ def get_status(expiring_days: int = 30) -> dict:
         "requests_total": len(requests),
         "request_stats": count_by_status(requests),
         "certificates_total": len(issued),
-        "certificate_stats": count_by_status(issued),
+        "certificate_stats": certificate_status_counts(issued),
         "revoked_count": crl["revoked_count"],
         "published_revoked_count": crl["published_revoked_count"],
         "crl_outdated": crl["crl_outdated"],

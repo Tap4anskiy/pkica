@@ -37,12 +37,33 @@ from pkica.services.audit_service import log_event
 from pkica.services.request_service import get_request
 
 
+def certificate_display_status(record: dict, now: datetime | None = None) -> str:
+    if record.get("status") == "revoked":
+        return "revoked"
+
+    now = now or datetime.now(timezone.utc)
+    try:
+        expires = datetime.fromisoformat(record["not_valid_after"])
+    except Exception:
+        return record.get("status", "unknown")
+
+    return "expired" if now > expires else "active"
+
+
+def certificate_status_counts(records: list[dict]) -> dict[str, int]:
+    now = datetime.now(timezone.utc)
+    result: dict[str, int] = {}
+    for record in records:
+        status = certificate_display_status(record, now)
+        result[status] = result.get(status, 0) + 1
+    return result
+
+
 def list_certificates(status: str | None = None, profile: str | None = None) -> list[dict]:
     records = load_issued_records(ISSUED_DB_PATH)
     now = datetime.now(timezone.utc)
     for record in records:
-        expires = datetime.fromisoformat(record["not_valid_after"])
-        record["display_status"] = "expired" if now > expires else record.get("status", "issued")
+        record["display_status"] = certificate_display_status(record, now)
     if status:
         records = [record for record in records if record.get("status") == status]
     if profile:
@@ -148,4 +169,3 @@ def verify_certificate_pem(cert_pem: str, *, check_crl: bool = True, source: str
         return verify_certificate_path(temp_path, check_crl=check_crl, source=source)
     finally:
         temp_path.unlink(missing_ok=True)
-

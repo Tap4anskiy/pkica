@@ -13,7 +13,7 @@
 
 <section class="metrics-grid">
   <div class="metric"><span>Ожидают решения</span><strong>{{ status.request_stats.get("pending", 0) }}</strong><a href="/requests?status=pending">Открыть заявки</a></div>
-  <div class="metric"><span>Active</span><strong>{{ status.certificate_stats.get("issued", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
+  <div class="metric"><span>Active</span><strong>{{ status.certificate_stats.get("active", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
   <div class="metric"><span>Revoked</span><strong>{{ crl.revoked_count }}</strong><a href="/crl">База отзыва</a></div>
   <div class="metric {{ 'needs-action' if crl.crl_outdated else '' }}"><span>Published</span><strong>{{ crl.published_revoked_count }}</strong><a href="/crl">{{ "Опубликовать CRL" if crl.crl_outdated else "CRL актуален" }}</a></div>
 </section>
@@ -70,7 +70,7 @@
     <h2>Сертификаты</h2>
     <table class="compact-table">
       <tr><th>Статус</th><th>Количество</th></tr>
-      <tr><td>Active</td><td>{{ status.certificate_stats.get("issued", 0) }}</td></tr>
+      <tr><td>Active</td><td>{{ status.certificate_stats.get("active", 0) }}</td></tr>
       <tr><td>Revoked</td><td>{{ crl.revoked_count }}</td></tr>
       <tr><td>Published</td><td>{{ crl.published_revoked_count }}</td></tr>
     </table>
@@ -89,7 +89,7 @@
       <dt>Обновлён</dt><dd>{{ crl.last_update|datetime }}</dd>
       <dt>Действует до</dt><dd>{{ crl.next_update|datetime }}</dd>
     </dl>
-    <form method="post" action="/crl/publish"><button>Опубликовать CRL</button></form>
+    <form method="post" action="/crl/publish" onsubmit="return confirm('Опубликовать новый CRL?')"><button>Опубликовать CRL</button></form>
   </article>
 </section>
 

@@ -31,7 +31,7 @@ from pkica.services.request_service import (
 )
 from pkica.services.status_service import cert_info, get_status
 from pkica.pki.crl import REASON_MAP
-from pkica.config import INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
+from pkica.config import BASE_DIR, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
@@ -99,6 +99,49 @@ def certificate_page_context(extra: dict | None = None) -> dict:
     return context
 
 
+def certificate_detail_context(serial: str, extra: dict | None = None) -> dict:
+    cert = get_certificate(serial)
+    try:
+        verification = {"ok": True, "result": verify_certificate_path(Path(cert["cert_path"]), source="web")}
+    except Exception as exc:
+        verification = {"ok": False, "error": str(exc)}
+
+    context = {"cert": cert, "verification": verification, "revocation_reasons": list(REASON_MAP)}
+    if extra:
+        context.update(extra)
+    return context
+
+
+def request_detail_context(request_id: int, extra: dict | None = None) -> dict:
+    record = get_request(request_id)
+    context = {"item": record, "validation": profile_validation(record)}
+    if extra:
+        context.update(extra)
+    return context
+
+
+def stand_certificate_path(value: str) -> Path:
+    path = Path(value.strip())
+    if not str(path):
+        raise ValueError("Select a certificate, paste PEM, or provide a path inside data/.")
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError("Only relative paths inside data/ are allowed.")
+
+    base = (Path.cwd() / BASE_DIR).resolve()
+    resolved = (Path.cwd() / path).resolve()
+    if resolved != base and base not in resolved.parents:
+        raise ValueError("Only relative paths inside data/ are allowed.")
+
+    return path
+
+
+def positive_days(value: str, default: int = 365) -> int:
+    days = int(value.strip() or str(default))
+    if days < 1:
+        raise ValueError("Certificate validity must be at least 1 day.")
+    return days
+
+
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
@@ -126,27 +169,35 @@ async def request_create(request: Request) -> Response:
 
 @router.get("/requests/{request_id}", response_class=HTMLResponse)
 def request_detail(request: Request, request_id: int) -> HTMLResponse:
-    record = get_request(request_id)
-    return render(request, "request_detail.html", {"item": record, "validation": profile_validation(record)})
+    return render(request, "request_detail.html", request_detail_context(request_id))
 
 
 @router.post("/requests/{request_id}/approve")
-def request_approve(request_id: int) -> RedirectResponse:
-    approve_request(request_id, source="web")
-    return RedirectResponse(f"/requests/{request_id}", status_code=303)
+def request_approve(request: Request, request_id: int) -> Response:
+    try:
+        approve_request(request_id, source="web")
+        return RedirectResponse(f"/requests/{request_id}", status_code=303)
+    except Exception as exc:
+        return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
 @router.post("/requests/{request_id}/reject")
-async def request_reject(request: Request, request_id: int) -> RedirectResponse:
+async def request_reject(request: Request, request_id: int) -> Response:
     data = await form_data(request)
-    reject_request(request_id, data.get("reason", "Rejected in web UI"), source="web")
-    return RedirectResponse(f"/requests/{request_id}", status_code=303)
+    try:
+        reject_request(request_id, data.get("reason", "Rejected in web UI"), source="web")
+        return RedirectResponse(f"/requests/{request_id}", status_code=303)
+    except Exception as exc:
+        return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
 @router.post("/requests/{request_id}/issue")
-def request_issue(request_id: int) -> RedirectResponse:
-    record = issue_certificate_from_request(request_id, source="web")
-    return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+def request_issue(request: Request, request_id: int) -> Response:
+    try:
+        record = issue_certificate_from_request(request_id, source="web")
+        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+    except Exception as exc:
+        return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
 @router.get("/certificates", response_class=HTMLResponse)
@@ -159,7 +210,7 @@ async def certificate_issue_from_request(request: Request) -> Response:
     data = await form_data(request)
     try:
         request_id = int(data.get("request_id", "").strip())
-        days = int(data.get("days", "365").strip() or "365")
+        days = positive_days(data.get("days", "365"))
         record = issue_certificate_from_request(request_id, days=days, source="web")
         return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
     except Exception as exc:
@@ -184,7 +235,7 @@ async def certificate_issue_from_csr(request: Request) -> Response:
     profile = data.get("profile", "server_tls")
     days_value = data.get("days", "365")
     try:
-        days = int(days_value.strip() or "365")
+        days = positive_days(days_value)
         with tempfile.NamedTemporaryFile("w", suffix=".csr.pem", delete=False, encoding="utf-8") as handle:
             handle.write(csr_pem)
             temp_path = Path(handle.name)
@@ -211,24 +262,17 @@ async def certificate_issue_from_csr(request: Request) -> Response:
 
 @router.get("/certificates/{serial}", response_class=HTMLResponse)
 def certificate_detail(request: Request, serial: str) -> HTMLResponse:
-    cert = get_certificate(serial)
-    verification = None
-    try:
-        verification = {"ok": True, "result": verify_certificate_path(Path(cert["cert_path"]), source="web")}
-    except Exception as exc:
-        verification = {"ok": False, "error": str(exc)}
-    return render(
-        request,
-        "certificate_detail.html",
-        {"cert": cert, "verification": verification, "revocation_reasons": list(REASON_MAP)},
-    )
+    return render(request, "certificate_detail.html", certificate_detail_context(serial))
 
 
 @router.post("/certificates/{serial}/revoke")
-async def certificate_revoke(request: Request, serial: str) -> RedirectResponse:
+async def certificate_revoke(request: Request, serial: str) -> Response:
     data = await form_data(request)
-    revoke_certificate(serial, data.get("reason", "unspecified"), source="web")
-    return RedirectResponse(f"/certificates/{serial}", status_code=303)
+    try:
+        revoke_certificate(serial, data.get("reason", "unspecified"), source="web")
+        return RedirectResponse(f"/certificates/{serial}", status_code=303)
+    except Exception as exc:
+        return render(request, "certificate_detail.html", certificate_detail_context(serial, {"error": str(exc)}), 400)
 
 
 @router.get("/crl", response_class=HTMLResponse)
@@ -237,9 +281,12 @@ def crl_page(request: Request) -> HTMLResponse:
 
 
 @router.post("/crl/publish")
-def crl_publish() -> RedirectResponse:
-    publish_crl(source="web")
-    return RedirectResponse("/crl", status_code=303)
+def crl_publish(request: Request) -> Response:
+    try:
+        publish_crl(source="web")
+        return RedirectResponse("/crl", status_code=303)
+    except Exception as exc:
+        return render(request, "crl.html", {"crl": crl_info(), "error": str(exc)}, 400)
 
 
 @router.get("/audit", response_class=HTMLResponse)
@@ -264,10 +311,7 @@ async def verify_submit(request: Request) -> HTMLResponse:
         elif data.get("pem", "").strip():
             result = verify_certificate_pem(data["pem"], source="web")
         else:
-            path = Path(data.get("path", ""))
-            if path.is_absolute() or ".." in path.parts:
-                raise ValueError("Only relative paths inside the stand are allowed")
-            result = verify_certificate_path(path, source="web")
+            result = verify_certificate_path(stand_certificate_path(data.get("path", "")), source="web")
         return render(
             request,
             "verify.html",
