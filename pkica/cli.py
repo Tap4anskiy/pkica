@@ -71,6 +71,11 @@ from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
 from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, start_web, stop_web, web_status
 
+
+def append_cli_audit(event: dict) -> None:
+    append_jsonl(AUDIT_LOG_PATH, {"source": "cli", **event})
+
+
 """Создание корневого УЦ"""
 def command_init_root(args: argparse.Namespace) -> int:
     ensure_ca_directories()
@@ -96,8 +101,7 @@ def command_init_root(args: argparse.Namespace) -> int:
     save_private_key(private_key, ROOT_KEY_PATH, password=password)
     save_certificate(cert, ROOT_CERT_PATH)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "ca.init_root",
             "subject": args.subject,
@@ -159,8 +163,7 @@ def command_init_intermediate(args: argparse.Namespace) -> int:
     save_csr(intermediate_csr, INTERMEDIATE_CSR_PATH)
     save_certificate(intermediate_cert, INTERMEDIATE_CERT_PATH)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "ca.init_intermediate",
             "subject": args.subject,
@@ -205,8 +208,7 @@ def command_key_gen(args: argparse.Namespace) -> int:
     private_key = generate_private_key(args.algo, args.rsa_bits)
     save_private_key(private_key, output_path, password=password)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "key.gen",
             "name": args.name,
@@ -251,8 +253,7 @@ def command_csr_gen(args: argparse.Namespace) -> int:
 
     save_subject_csr(csr, output_path)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "csr.gen",
             "name": args.name,
@@ -366,8 +367,7 @@ def command_cert_issue(args: argparse.Namespace) -> int:
                 serial_number=serial_hex,
             )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "cert.issue",
                 "request_id": request_id,
@@ -409,8 +409,7 @@ def command_req_submit(args: argparse.Namespace) -> int:
             profile=args.profile,
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.submit",
                 "request_id": record["id"],
@@ -466,8 +465,7 @@ def command_req_approve(args: argparse.Namespace) -> int:
             status="approved",
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.approve",
                 "request_id": record["id"],
@@ -494,8 +492,7 @@ def command_req_reject(args: argparse.Namespace) -> int:
             reason=args.reason,
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.reject",
                 "request_id": record["id"],
@@ -591,8 +588,7 @@ def command_cert_revoke(args: argparse.Namespace) -> int:
             revoked_at=revocation["revoked_at"],
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "cert.revoke",
                 "serial_number": updated_record["serial_number"],
@@ -634,8 +630,7 @@ def command_crl_publish(args: argparse.Namespace) -> int:
 
         save_crl(crl, CRL_PATH)
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "crl.publish",
                 "crl_path": str(CRL_PATH),
@@ -699,8 +694,7 @@ def command_verify(args: argparse.Namespace) -> int:
             print("CRL:         not checked")
             print("Warning:     revocation status was not checked")
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "verify",
                 "result": "success",
@@ -720,8 +714,7 @@ def command_verify(args: argparse.Namespace) -> int:
         print("Certificate verification failed")
         print("-" * 60)
         print(f"Reason: {exc}")
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "verify",
                 "result": "failed",
@@ -756,8 +749,7 @@ def command_reset(args: argparse.Namespace) -> int:
         # пересоздаём базовую структуру (чтобы не было пусто)
         ensure_ca_directories()
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "reset",
                 "data_dir": str(base_dir),
@@ -825,8 +817,7 @@ def command_status(args: argparse.Namespace) -> int:
             "protected external storage device."
         )
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "status",
             "root_ready": root_ready,
@@ -960,8 +951,7 @@ def command_export_trust(args: argparse.Namespace) -> int:
         copy_file(INTERMEDIATE_CERT_PATH, intermediate_out)
         write_chain([INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH], chain_out)
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "export.trust",
                 "output_dir": str(TRUST_EXPORT_DIR),
@@ -1030,8 +1020,7 @@ def command_export_nginx(args: argparse.Namespace) -> int:
             encoding="utf-8",
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "export.nginx",
                 "serial_number": serial,

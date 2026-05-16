@@ -9,6 +9,7 @@ from pkica.storage.audit import append_jsonl
 
 
 def log_event(action: str, result: str = "success", **details: object) -> None:
+    details.setdefault("source", "service")
     append_jsonl(AUDIT_LOG_PATH, {"action": action, "result": result, **details})
 
 

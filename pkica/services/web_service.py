@@ -45,7 +45,7 @@ from pkica.pki.keys import generate_private_key, load_private_key, save_private_
 from pkica.pki.verify import verify_certificate_chain
 from pkica.policy.profiles import build_end_entity_extensions, validate_csr_for_profile
 from pkica.storage.revocations import add_revocation, is_revoked
-from pkica.services.audit_service import log_event
+from pkica.services.audit_service import log_event as audit_log_event
 
 
 SYSTEM_AVAILABLE = Path("/etc/nginx/sites-available/pkica-web.conf")
@@ -58,6 +58,11 @@ class WebCertificateActionRequired(ValueError):
     def __init__(self, status: dict):
         self.status = status
         super().__init__(status["message"])
+
+
+def log_event(action: str, result: str = "success", **details: object) -> None:
+    details.setdefault("source", "cli")
+    audit_log_event(action, result=result, **details)
 
 
 def ensure_intermediate_ready() -> None:
@@ -317,7 +322,7 @@ def generate_web_certificate(
     record = register_web_certificate(cert)
     log_event("web.cert.issue", cert_path=str(WEB_CERT_PATH), host=host, serial_number=format(cert.serial_number, "x"))
     if record:
-        log_event("cert.issue", serial_number=record["serial_number"], profile=record["profile"], source="web")
+        log_event("cert.issue", serial_number=record["serial_number"], profile=record["profile"])
 
 
 def nginx_config_text(host: str, port: int) -> str:

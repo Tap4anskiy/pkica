@@ -26,6 +26,7 @@ from pkica.pki.ca import (
     save_issued_records,
 )
 from pkica.pki.keys import generate_private_key, save_private_key
+from pkica import cli
 from pkica.services import audit_service
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_status
@@ -89,6 +90,19 @@ def test_audit_events_can_be_filtered(tmp_path, monkeypatch: pytest.MonkeyPatch)
     assert [event["action"] for event in audit_service.list_events(result="failed")] == ["verify"]
     assert [event["action"] for event in audit_service.list_events(query="abc")] == ["cert.issue"]
     assert audit_service.event_values(rows, "source") == ["cli", "web"]
+
+
+def test_audit_sources_have_defaults(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    audit_log = tmp_path / "audit.log"
+    monkeypatch.setattr(audit_service, "AUDIT_LOG_PATH", audit_log)
+    monkeypatch.setattr(cli, "AUDIT_LOG_PATH", audit_log)
+
+    audit_service.log_event("service.event")
+    cli.append_cli_audit({"action": "cli.event"})
+
+    rows = audit_service.list_events()
+    assert rows[0]["source"] == "service"
+    assert rows[1]["source"] == "cli"
 
 
 def create_test_ca() -> None:
