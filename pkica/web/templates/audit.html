@@ -57,58 +57,69 @@
     <span class="muted">{{ events|length }} найдено</span>
   </div>
   {% if events %}
-  <div class="audit-list">
-    {% for event in events|reverse %}
-    <article class="audit-event audit-event-{{ event.tone }}">
-      <div class="audit-event-main">
-        <div>
-          <span class="muted">{{ event.timestamp|datetime }}</span>
-          <h3>{{ event.action_label }}</h3>
+  <div class="table-wrap">
+    <table class="audit-table">
+      <tr>
+        <th>Время</th>
+        <th>Действие</th>
+        <th>Результат</th>
+        <th>Источник</th>
+        <th>Объект</th>
+        <th>Детали</th>
+      </tr>
+      {% for event in events|reverse %}
+      <tr class="audit-row audit-row-{{ event.tone }}">
+        <td class="audit-time">{{ event.timestamp|datetime }}</td>
+        <td>
+          <strong>{{ event.action_label }}</strong>
           <code>{{ event.action }}</code>
-        </div>
-        <div class="audit-badges">
-          <span class="badge {{ 'bad' if event.result in ['failed', 'error'] else 'ok' }}">{{ event.result or "-" }}</span>
-          {% if event.source %}
-          <span class="status-pill">{{ event.source }}</span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="audit-links">
-        {% if event.serial_number %}
-        <a href="/certificates/{{ event.serial_number }}">Сертификат</a>
-        {% endif %}
-        {% if event.request_id is defined and event.request_id is not none and event.request_id != "" %}
-        <a href="/requests/{{ event.request_id }}">Заявка</a>
-        {% endif %}
-        {% if event.action == "crl.publish" %}
-        <a href="/crl">CRL</a>
-        {% endif %}
-      </div>
-
-      {% if event.detail_items %}
-      <details class="audit-details">
-        <summary>Детали</summary>
-        <dl class="detail-list">
-          {% for key, value in event.detail_items %}
-          <dt>{{ key }}</dt>
-          <dd>
-            {% if key == "serial_number" %}
-            <a href="/certificates/{{ value }}"><code>{{ value }}</code></a>
-            {% elif key == "request_id" %}
-            <a href="/requests/{{ value }}"><code>{{ value }}</code></a>
-            {% elif "path" in key or key in ["output", "message"] %}
-            <code>{{ value }}</code>
-            {% else %}
-            {{ value }}
+        </td>
+        <td><span class="badge {{ 'bad' if event.result in ['failed', 'error'] else 'ok' }}">{{ event.result or "-" }}</span></td>
+        <td>{% if event.source %}<span class="status-pill">{{ event.source }}</span>{% else %}-{% endif %}</td>
+        <td>
+          <div class="audit-object-links">
+            {% if event.serial_number %}
+            <a href="/certificates/{{ event.serial_number }}">Сертификат</a>
             {% endif %}
-          </dd>
-          {% endfor %}
-        </dl>
-      </details>
-      {% endif %}
-    </article>
-    {% endfor %}
+            {% if event.request_id is defined and event.request_id is not none and event.request_id != "" %}
+            <a href="/requests/{{ event.request_id }}">Заявка</a>
+            {% endif %}
+            {% if event.action == "crl.publish" %}
+            <a href="/crl">CRL</a>
+            {% endif %}
+            {% if not event.serial_number and (event.request_id is not defined or event.request_id is none or event.request_id == "") and event.action != "crl.publish" %}
+            <span class="muted">-</span>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          {% if event.detail_items %}
+          <details class="audit-row-details">
+            <summary>Показать</summary>
+            <dl class="detail-list">
+              {% for key, value in event.detail_items %}
+              <dt>{{ key }}</dt>
+              <dd>
+                {% if key == "serial_number" %}
+                <a href="/certificates/{{ value }}"><code>{{ value }}</code></a>
+                {% elif key == "request_id" %}
+                <a href="/requests/{{ value }}"><code>{{ value }}</code></a>
+                {% elif "path" in key or key in ["output", "message"] %}
+                <code>{{ value }}</code>
+                {% else %}
+                {{ value }}
+                {% endif %}
+              </dd>
+              {% endfor %}
+            </dl>
+          </details>
+          {% else %}
+          <span class="muted">-</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
   </div>
   {% else %}
   <p class="muted">События не найдены. Измените фильтры или сбросьте поиск.</p>

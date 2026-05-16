@@ -473,73 +473,74 @@ h2 {
   font-weight: 400;
 }
 
-.audit-list {
-  display: grid;
-  gap: 12px;
+.audit-table {
+  table-layout: fixed;
 }
 
-.audit-event {
-  border: 1px solid #dfe5ee;
-  border-left-width: 5px;
-  border-radius: 8px;
-  background: #fff;
-  padding: 14px;
+.audit-table th:nth-child(1) {
+  width: 150px;
 }
 
-.audit-event-ok {
+.audit-table th:nth-child(3),
+.audit-table th:nth-child(4),
+.audit-table th:nth-child(5),
+.audit-table th:nth-child(6) {
+  width: 120px;
+}
+
+.audit-row td:first-child {
+  border-left: 5px solid #98a2b3;
+}
+
+.audit-row-ok td:first-child {
   border-left-color: #2e7d4f;
 }
 
-.audit-event-bad {
+.audit-row-bad td:first-child {
   border-left-color: #b42318;
 }
 
-.audit-event-neutral {
-  border-left-color: #98a2b3;
+.audit-row strong,
+.audit-row code {
+  display: block;
 }
 
-.audit-event-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: flex-start;
+.audit-row code {
+  margin-top: 2px;
 }
 
-.audit-event h3 {
-  margin: 2px 0 3px;
-  font-size: 17px;
+.audit-time {
+  color: #475467;
+  white-space: nowrap;
 }
 
-.audit-badges,
-.audit-links {
+.audit-object-links {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
-.audit-links {
-  justify-content: flex-start;
-  margin-top: 10px;
-}
-
-.audit-links a,
-.audit-details a {
+.audit-object-links a,
+.audit-row-details a {
   color: #1166bb;
   text-decoration: none;
 }
 
-.audit-details {
-  margin-top: 12px;
-}
-
-.audit-details summary {
+.audit-row-details summary {
   color: #1166bb;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.audit-details .detail-list {
+.audit-row-details[open] summary {
+  margin-bottom: 10px;
+}
+
+.audit-row-details .detail-list {
+  grid-template-columns: 115px minmax(0, 1fr);
   margin-top: 10px;
+  min-width: 360px;
+  padding: 12px;
 }
 
 .table-wrap {
@@ -682,14 +683,9 @@ pre {
   }
 
   .section-head,
-  .audit-event-main,
   .toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .audit-badges {
-    justify-content: flex-start;
   }
 
   .filter-toolbar label {
