@@ -8,10 +8,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.x509.oid import ExtensionOID, NameOID
+
 from pkica.config import (
     BASE_DIR,
+    ISSUED_DB_PATH,
     INTERMEDIATE_CERT_PATH,
     INTERMEDIATE_KEY_PATH,
+    REVOKED_DB_PATH,
     ROOT_CERT_PATH,
     WEB_CERT_PATH,
     WEB_CSR_PATH,
@@ -23,15 +29,35 @@ from pkica.config import (
     WEB_STATE_PATH,
     ensure_ca_directories,
 )
-from pkica.pki.ca import create_end_entity_certificate, load_certificate, save_certificate, save_fullchain
+from pkica.pki.ca import (
+    append_issued_record,
+    certificate_to_record,
+    create_end_entity_certificate,
+    load_certificate,
+    load_issued_records,
+    mark_issued_record_revoked,
+    save_certificate,
+    save_fullchain,
+    save_issued_records,
+)
 from pkica.pki.csr import create_csr, save_csr
 from pkica.pki.keys import generate_private_key, load_private_key, save_private_key
+from pkica.pki.verify import verify_certificate_chain
 from pkica.policy.profiles import build_end_entity_extensions, validate_csr_for_profile
+from pkica.storage.revocations import add_revocation, is_revoked
 from pkica.services.audit_service import log_event
 
 
 SYSTEM_AVAILABLE = Path("/etc/nginx/sites-available/pkica-web.conf")
 SYSTEM_ENABLED = Path("/etc/nginx/sites-enabled/pkica-web.conf")
+WEB_CERT_PROFILE = "server_tls"
+WEB_CERT_PURPOSE = "pkica-web"
+
+
+class WebCertificateActionRequired(ValueError):
+    def __init__(self, status: dict):
+        self.status = status
+        super().__init__(status["message"])
 
 
 def ensure_intermediate_ready() -> None:
@@ -58,12 +84,199 @@ def read_pid() -> int | None:
         return None
 
 
+def public_key_bytes(key: object) -> bytes:
+    return key.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
+def web_cert_serial() -> str | None:
+    if not WEB_CERT_PATH.exists():
+        return None
+    try:
+        return format(load_certificate(WEB_CERT_PATH).serial_number, "x")
+    except Exception:
+        return None
+
+
+def web_certificate_records() -> list[dict]:
+    serial = web_cert_serial()
+    records = load_issued_records(ISSUED_DB_PATH)
+    return [
+        record
+        for record in records
+        if record.get("purpose") == WEB_CERT_PURPOSE
+        or Path(record.get("cert_path", "")) == WEB_CERT_PATH
+        or (serial is not None and record.get("serial_number", "").lower() == serial)
+    ]
+
+
+def register_web_certificate(cert=None) -> dict | None:
+    if not WEB_CERT_PATH.exists():
+        return None
+
+    cert = cert or load_certificate(WEB_CERT_PATH)
+    serial = format(cert.serial_number, "x")
+    existing = load_issued_records(ISSUED_DB_PATH)
+    for record in existing:
+        if record.get("serial_number", "").lower() == serial:
+            record["purpose"] = WEB_CERT_PURPOSE
+            record["cert_path"] = str(WEB_CERT_PATH)
+            record["fullchain_path"] = str(WEB_FULLCHAIN_PATH)
+            save_issued_records(ISSUED_DB_PATH, existing)
+            return record
+
+    record = certificate_to_record(cert, WEB_CERT_PROFILE, WEB_CERT_PATH, WEB_FULLCHAIN_PATH)
+    record["purpose"] = WEB_CERT_PURPOSE
+    append_issued_record(ISSUED_DB_PATH, record)
+    log_event("web.cert.register", cert_path=str(WEB_CERT_PATH), serial_number=serial)
+    return record
+
+
+def certificate_has_host(cert, host: str) -> bool:
+    try:
+        san = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME).value
+        if host in san.get_values_for_type(x509.DNSName):
+            return True
+    except Exception:
+        pass
+
+    common_names = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+    return bool(common_names and common_names[0].value == host)
+
+
+def web_certificate_status(host: str) -> dict:
+    status = {
+        "key_exists": WEB_KEY_PATH.exists(),
+        "cert_exists": WEB_CERT_PATH.exists(),
+        "fullchain_exists": WEB_FULLCHAIN_PATH.exists(),
+        "registered": False,
+        "usable": False,
+        "reasons": [],
+        "message": "",
+    }
+
+    if not status["key_exists"] and not status["cert_exists"]:
+        status["message"] = "Web key and certificate were not found."
+        return status
+    if not status["key_exists"]:
+        status["reasons"].append("web private key is missing")
+    if not status["cert_exists"]:
+        status["reasons"].append("web certificate is missing")
+
+    cert = None
+    if status["cert_exists"]:
+        try:
+            cert = load_certificate(WEB_CERT_PATH)
+            status["serial_number"] = format(cert.serial_number, "x")
+        except Exception as exc:
+            status["reasons"].append(f"web certificate cannot be loaded: {exc}")
+
+    if status["key_exists"] and cert is not None:
+        try:
+            key = load_private_key(WEB_KEY_PATH)
+            if public_key_bytes(key) != public_key_bytes(cert):
+                status["reasons"].append("web private key does not match certificate")
+        except Exception as exc:
+            status["reasons"].append(f"web private key cannot be loaded: {exc}")
+
+    if cert is not None:
+        try:
+            verify_certificate_chain(WEB_CERT_PATH, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH)
+        except Exception as exc:
+            status["reasons"].append(str(exc))
+        if not certificate_has_host(cert, host):
+            status["reasons"].append(f"web certificate is not valid for host {host}")
+        if is_revoked(REVOKED_DB_PATH, format(cert.serial_number, "x")):
+            status["reasons"].append("web certificate is revoked")
+
+    records = web_certificate_records()
+    status["registered"] = bool(records)
+    if any(record.get("status") == "revoked" for record in records):
+        status["reasons"].append("web certificate is revoked in issued DB")
+
+    status["usable"] = bool(status["key_exists"] and cert is not None and not status["reasons"])
+    status["message"] = "Existing web certificate can be reused." if status["usable"] else "; ".join(status["reasons"])
+    return status
+
+
+def revoke_web_certificates(reason: str = "superseded") -> None:
+    for record in web_certificate_records():
+        if record.get("status") == "revoked":
+            continue
+        serial = record["serial_number"]
+        if not is_revoked(REVOKED_DB_PATH, serial):
+            revocation = add_revocation(REVOKED_DB_PATH, serial, reason, record.get("cert_path", str(WEB_CERT_PATH)))
+        else:
+            revocation = {"revoked_at": record.get("revoked_at", "")}
+        try:
+            mark_issued_record_revoked(ISSUED_DB_PATH, serial, reason, revocation["revoked_at"])
+        except ValueError:
+            pass
+        log_event("web.cert.revoke", serial_number=serial, reason=reason)
+
+
+def remove_web_certificate_files(remove_key: bool = False) -> None:
+    WEB_CERT_PATH.unlink(missing_ok=True)
+    WEB_FULLCHAIN_PATH.unlink(missing_ok=True)
+    WEB_CSR_PATH.unlink(missing_ok=True)
+    if remove_key:
+        WEB_KEY_PATH.unlink(missing_ok=True)
+
+
 def generate_web_certificate(
     host: str,
     days: int = 365,
     intermediate_password: str | None = None,
+    action: str = "auto",
 ) -> None:
     ensure_intermediate_ready()
+    existing_status = web_certificate_status(host)
+    if action == "auto":
+        if existing_status["usable"]:
+            if not existing_status["fullchain_exists"]:
+                cert = load_certificate(WEB_CERT_PATH)
+                save_fullchain(
+                    cert,
+                    load_certificate(INTERMEDIATE_CERT_PATH),
+                    load_certificate(ROOT_CERT_PATH),
+                    WEB_FULLCHAIN_PATH,
+                )
+            register_web_certificate()
+            log_event("web.cert.reuse", cert_path=str(WEB_CERT_PATH), serial_number=existing_status.get("serial_number"))
+            return
+        if existing_status["key_exists"] or existing_status["cert_exists"]:
+            raise WebCertificateActionRequired(existing_status)
+    elif action == "reuse":
+        if not existing_status["usable"]:
+            raise ValueError(f"Existing web certificate cannot be reused: {existing_status['message']}")
+        if not existing_status["fullchain_exists"]:
+            cert = load_certificate(WEB_CERT_PATH)
+            save_fullchain(
+                cert,
+                load_certificate(INTERMEDIATE_CERT_PATH),
+                load_certificate(ROOT_CERT_PATH),
+                WEB_FULLCHAIN_PATH,
+            )
+        register_web_certificate()
+        log_event("web.cert.reuse", cert_path=str(WEB_CERT_PATH), serial_number=existing_status.get("serial_number"))
+        return
+    elif action == "rotate-cert":
+        if existing_status.get("serial_number"):
+            if not existing_status["registered"]:
+                register_web_certificate()
+            revoke_web_certificates()
+        remove_web_certificate_files(remove_key=False)
+    elif action == "rotate-key":
+        if existing_status.get("serial_number"):
+            if not existing_status["registered"]:
+                register_web_certificate()
+            revoke_web_certificates()
+        remove_web_certificate_files(remove_key=True)
+    else:
+        raise ValueError(f"Unsupported web certificate action: {action}")
+
     intermediate_key = load_private_key(INTERMEDIATE_KEY_PATH, intermediate_password)
     intermediate_cert = load_certificate(INTERMEDIATE_CERT_PATH)
     root_cert = load_certificate(ROOT_CERT_PATH)
@@ -91,7 +304,10 @@ def generate_web_certificate(
     )
     save_certificate(cert, WEB_CERT_PATH)
     save_fullchain(cert, intermediate_cert, root_cert, WEB_FULLCHAIN_PATH)
+    record = register_web_certificate(cert)
     log_event("web.cert.issue", cert_path=str(WEB_CERT_PATH), host=host, serial_number=format(cert.serial_number, "x"))
+    if record:
+        log_event("cert.issue", serial_number=record["serial_number"], profile=record["profile"], source="web")
 
 
 def nginx_config_text(host: str, port: int) -> str:
@@ -150,9 +366,10 @@ def start_web(
     port: int = 8000,
     configure_nginx: bool = False,
     intermediate_password: str | None = None,
+    web_cert_action: str = "auto",
 ) -> dict:
     ensure_ca_directories()
-    generate_web_certificate(host, intermediate_password=intermediate_password)
+    generate_web_certificate(host, intermediate_password=intermediate_password, action=web_cert_action)
     write_nginx_config(host, port)
 
     pid = read_pid()

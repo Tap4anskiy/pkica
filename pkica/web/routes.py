@@ -154,6 +154,9 @@ def audit_action_label(action: str) -> str:
         "web.key.generate": "Генерация web-ключа",
         "web.csr.generate": "Генерация web-CSR",
         "web.cert.issue": "Выпуск web-сертификата",
+        "web.cert.register": "Регистрация web-сертификата",
+        "web.cert.reuse": "Повторное использование web-сертификата",
+        "web.cert.revoke": "Отзыв web-сертификата",
         "web.nginx.generate": "Генерация nginx",
         "web.nginx.test": "Проверка nginx",
         "web.nginx.reload": "Перезагрузка nginx",
@@ -165,9 +168,9 @@ def audit_event_tone(event: dict) -> str:
     if event.get("result") in {"failed", "error"}:
         return "bad"
     action = str(event.get("action", ""))
-    if action in {"cert.revoke", "req.reject"}:
+    if action in {"cert.revoke", "req.reject", "web.cert.revoke"}:
         return "bad"
-    if action in {"cert.issue", "crl.publish", "req.approve", "web.cert.issue"}:
+    if action in {"cert.issue", "crl.publish", "req.approve", "web.cert.issue", "web.cert.register", "web.cert.reuse"}:
         return "ok"
     return "neutral"
 

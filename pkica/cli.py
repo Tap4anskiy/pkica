@@ -69,7 +69,7 @@ from pkica.pki.verify import verify_certificate_chain
 from pkica.storage.export import copy_file, write_chain
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
-from pkica.services.web_service import cleanup_web_artifacts, start_web, stop_web, web_status
+from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, start_web, stop_web, web_status
 
 """Создание корневого УЦ"""
 def command_init_root(args: argparse.Namespace) -> int:
@@ -843,18 +843,64 @@ def command_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def choose_web_certificate_action(status: dict) -> str | None:
+    print("Existing web certificate/key set needs attention.")
+    print(f"Reason: {status['message']}")
+    print()
+    options: list[tuple[str, str, str]] = []
+    if status.get("usable"):
+        options.append(("1", "reuse", "Use found certificate and key"))
+    options.append(
+        (str(len(options) + 1), "rotate-cert", "Revoke existing web certificate and issue a new one with the current key")
+    )
+    options.append(
+        (
+            str(len(options) + 1),
+            "rotate-key",
+            "Revoke existing web certificate, delete the web key, and issue a new key/certificate",
+        )
+    )
+    options.append((str(len(options) + 1), "cancel", "Cancel"))
+
+    for number, _, label in options:
+        print(f"{number}. {label}")
+
+    selected = input("Choose action: ").strip()
+    for number, action, _ in options:
+        if selected == number:
+            return None if action == "cancel" else action
+    return None
+
+
+def run_web_start(args: argparse.Namespace, intermediate_password: str | None, web_cert_action: str = "auto") -> dict:
+    return start_web(
+        host=args.host,
+        port=args.port,
+        configure_nginx=args.configure_nginx,
+        intermediate_password=intermediate_password,
+        web_cert_action=web_cert_action,
+    )
+
+
 def command_web_start(args: argparse.Namespace) -> int:
     intermediate_password = None
     if args.intermediate_key_encrypted:
         intermediate_password = getpass.getpass("Enter password for Intermediate CA private key: ")
 
     try:
-        result = start_web(
-            host=args.host,
-            port=args.port,
-            configure_nginx=args.configure_nginx,
-            intermediate_password=intermediate_password,
-        )
+        try:
+            result = run_web_start(args, intermediate_password)
+        except WebCertificateActionRequired as exc:
+            if not sys.stdin.isatty():
+                print(f"Error: {exc}")
+                print("Run the command from an interactive terminal to choose how to handle existing web artifacts.")
+                return 1
+            action = choose_web_certificate_action(exc.status)
+            if action is None:
+                print("Cancelled.")
+                return 1
+            result = run_web_start(args, intermediate_password, action)
+
         print("pkica web started.")
         print(f"URL:          {result['url']}")
         print(f"PID:          {result['pid']}")
