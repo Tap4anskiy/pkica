@@ -206,9 +206,9 @@ def test_cli_ca_happy_path_from_clean_temp_directory(tmp_path: Path) -> None:
     assert "CRL:             published" in output
     assert "Total:           1" in output
     assert "Issued:          1" in output
-    assert "Total issued:    1" in output
+    assert "Active:          0" in output
     assert "Revoked:         1" in output
-    assert "Revocation DB:   1" in output
+    assert "Published:       1" in output
     assert "Warning: Root CA private key is present in the local CA directory." in output
     assert "restricted-access system or to a protected external storage device" in output
 

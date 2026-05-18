@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pkica</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="topbar">
+    <a href="/admin">pkica admin</a>
+    <a href="/admin/requests">Заявки</a>
+    <a href="/admin/requests/new">Новая CSR</a>
+    <a href="/admin/certificates">Сертификаты</a>
+    <a href="/admin/crl">CRL</a>
+    <a href="/admin/verify">Проверка</a>
+    <a href="/admin/audit">Аудит</a>
+    <form class="topbar-form" method="post" action="/admin/logout"><button>Выйти</button></form>
+  </nav>
+  <main>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

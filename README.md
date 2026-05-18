@@ -93,15 +93,14 @@ Issued:          0
 Rejected:        0
 
 Certificates
-Total issued:    0
 Active:          0
 Revoked:         0
-Revocation DB:   0
+Published:       0
 
 Warning: Root CA private key is present in the local CA directory. Isolate it by moving it to a restricted-access system or to a protected external storage device.
 ```
 
-В выводе также показываются пути к каталогу данных, сертификатам, JSON-реестрам и CRL. Если закрытый ключ Root CA найден в локальной директории УЦ, `status` дополнительно выводит предупреждение о необходимости изолировать его.
+В блоке `Certificates` поле `Active` показывает действующие выпущенные сертификаты, `Revoked` — записи в базе отзыва, а `Published` — записи, уже попавшие в опубликованный CRL. В выводе также показываются пути к каталогу данных, сертификатам, JSON-реестрам и CRL. Если закрытый ключ Root CA найден в локальной директории УЦ, `status` дополнительно выводит предупреждение о необходимости изолировать его.
 
 ## 5. Выпуск серверного сертификата
 

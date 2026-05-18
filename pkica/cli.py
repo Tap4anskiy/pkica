@@ -24,7 +24,6 @@ from pkica.config import (
     CRL_PATH,
     REVOKED_DB_PATH,
     NGINX_EXPORT_DIR,
-    TRUST_EXPORT_DIR,
     ensure_ca_directories,
 )
 from pkica.pki.ca import (
@@ -66,7 +65,16 @@ from pkica.pki.crl import REASON_MAP, create_crl, save_crl
 from pkica.storage.revocations import add_revocation, load_revocations
 from pkica.storage.status import count_by_status, load_json_list
 from pkica.pki.verify import verify_certificate_chain
-from pkica.storage.export import copy_file, write_chain
+from pkica.storage.export import copy_file
+from pkica.services.certificate_service import certificate_status_counts
+from pkica.services.crl_service import crl_info
+from pkica.services.trust_service import export_trust_bundle
+from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, start_web, stop_web, web_status
+
+
+def append_cli_audit(event: dict) -> None:
+    append_jsonl(AUDIT_LOG_PATH, {"source": "cli", **event})
+
 
 """Создание корневого УЦ"""
 def command_init_root(args: argparse.Namespace) -> int:
@@ -93,8 +101,7 @@ def command_init_root(args: argparse.Namespace) -> int:
     save_private_key(private_key, ROOT_KEY_PATH, password=password)
     save_certificate(cert, ROOT_CERT_PATH)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "ca.init_root",
             "subject": args.subject,
@@ -156,8 +163,7 @@ def command_init_intermediate(args: argparse.Namespace) -> int:
     save_csr(intermediate_csr, INTERMEDIATE_CSR_PATH)
     save_certificate(intermediate_cert, INTERMEDIATE_CERT_PATH)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "ca.init_intermediate",
             "subject": args.subject,
@@ -202,8 +208,7 @@ def command_key_gen(args: argparse.Namespace) -> int:
     private_key = generate_private_key(args.algo, args.rsa_bits)
     save_private_key(private_key, output_path, password=password)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "key.gen",
             "name": args.name,
@@ -248,8 +253,7 @@ def command_csr_gen(args: argparse.Namespace) -> int:
 
     save_subject_csr(csr, output_path)
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "csr.gen",
             "name": args.name,
@@ -363,8 +367,7 @@ def command_cert_issue(args: argparse.Namespace) -> int:
                 serial_number=serial_hex,
             )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "cert.issue",
                 "request_id": request_id,
@@ -406,8 +409,7 @@ def command_req_submit(args: argparse.Namespace) -> int:
             profile=args.profile,
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.submit",
                 "request_id": record["id"],
@@ -463,8 +465,7 @@ def command_req_approve(args: argparse.Namespace) -> int:
             status="approved",
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.approve",
                 "request_id": record["id"],
@@ -491,8 +492,7 @@ def command_req_reject(args: argparse.Namespace) -> int:
             reason=args.reason,
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "req.reject",
                 "request_id": record["id"],
@@ -588,8 +588,7 @@ def command_cert_revoke(args: argparse.Namespace) -> int:
             revoked_at=revocation["revoked_at"],
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "cert.revoke",
                 "serial_number": updated_record["serial_number"],
@@ -631,8 +630,7 @@ def command_crl_publish(args: argparse.Namespace) -> int:
 
         save_crl(crl, CRL_PATH)
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "crl.publish",
                 "crl_path": str(CRL_PATH),
@@ -696,8 +694,7 @@ def command_verify(args: argparse.Namespace) -> int:
             print("CRL:         not checked")
             print("Warning:     revocation status was not checked")
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "verify",
                 "result": "success",
@@ -717,8 +714,7 @@ def command_verify(args: argparse.Namespace) -> int:
         print("Certificate verification failed")
         print("-" * 60)
         print(f"Reason: {exc}")
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "verify",
                 "result": "failed",
@@ -746,14 +742,14 @@ def command_reset(args: argparse.Namespace) -> int:
             return 1
 
     try:
+        cleanup_web_artifacts()
         shutil.rmtree(base_dir)
         print(f"Removed: {base_dir}")
 
         # пересоздаём базовую структуру (чтобы не было пусто)
         ensure_ca_directories()
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "reset",
                 "data_dir": str(base_dir),
@@ -771,10 +767,10 @@ def command_reset(args: argparse.Namespace) -> int:
 def command_status(args: argparse.Namespace) -> int:
     requests = load_json_list(REQUESTS_DB_PATH)
     issued = load_json_list(ISSUED_DB_PATH)
-    revoked = load_json_list(REVOKED_DB_PATH)
+    crl = crl_info()
 
     request_stats = count_by_status(requests)
-    cert_stats = count_by_status(issued)
+    cert_stats = certificate_status_counts(issued)
 
     root_ready = ROOT_CERT_PATH.exists()
     root_key_present = ROOT_KEY_PATH.exists()
@@ -799,10 +795,9 @@ def command_status(args: argparse.Namespace) -> int:
 
     print()
     print("Certificates")
-    print(f"Total issued:    {len(issued)}")
-    print(f"Active:          {cert_stats.get('issued', 0)}")
-    print(f"Revoked:         {cert_stats.get('revoked', 0)}")
-    print(f"Revocation DB:   {len(revoked)}")
+    print(f"Active:          {cert_stats.get('active', 0)}")
+    print(f"Revoked:         {crl['revoked_count']}")
+    print(f"Published:       {crl['published_revoked_count']}")
 
     print()
     print("Paths")
@@ -822,8 +817,7 @@ def command_status(args: argparse.Namespace) -> int:
             "protected external storage device."
         )
 
-    append_jsonl(
-        AUDIT_LOG_PATH,
+    append_cli_audit(
         {
             "action": "status",
             "root_ready": root_ready,
@@ -832,36 +826,169 @@ def command_status(args: argparse.Namespace) -> int:
             "crl_ready": crl_ready,
             "requests_total": len(requests),
             "certificates_total": len(issued),
-            "revocations_total": len(revoked),
+            "revocations_total": crl["revoked_count"],
+            "published_revocations_total": crl["published_revoked_count"],
         },
     )
 
     return 0
 
-def command_export_trust(args: argparse.Namespace) -> int:
-    ensure_ca_directories()
+
+def choose_web_certificate_action(status: dict) -> str | None:
+    print("Existing web certificate/key set needs attention.")
+    print(f"Reason: {status['message']}")
+    print()
+    options: list[tuple[str, str, str]] = []
+    if status.get("usable"):
+        options.append(("1", "reuse", "Use found certificate and key"))
+    options.append(
+        (str(len(options) + 1), "rotate-cert", "Revoke existing web certificate and issue a new one with the current key")
+    )
+    options.append(
+        (
+            str(len(options) + 1),
+            "rotate-key",
+            "Revoke existing web certificate, delete the web key, and issue a new key/certificate",
+        )
+    )
+    options.append((str(len(options) + 1), "cancel", "Cancel"))
+
+    for number, _, label in options:
+        print(f"{number}. {label}")
+
+    selected = input("Choose action: ").strip()
+    for number, action, _ in options:
+        if selected == number:
+            return None if action == "cancel" else action
+    return None
+
+
+def run_web_start(args: argparse.Namespace, intermediate_password: str | None, web_cert_action: str = "auto") -> dict:
+    return start_web(
+        host=args.host,
+        port=args.port,
+        configure_nginx=args.configure_nginx,
+        intermediate_password=intermediate_password,
+        web_cert_action=web_cert_action,
+    )
+
+
+def print_web_certificate_info(certificate: dict | None) -> None:
+    if not certificate:
+        print("Web certificate: not found")
+        return
+
+    print()
+    print("Web certificate")
+    print(f"Serial:       {certificate.get('serial_number', '-')}")
+    print(f"Subject:      {certificate.get('subject', '-')}")
+    print(f"Issuer:       {certificate.get('issuer', '-')}")
+    print(f"Valid from:   {certificate.get('not_valid_before', '-')}")
+    print(f"Valid until:  {certificate.get('not_valid_after', '-')}")
+    print(f"Cert path:    {certificate.get('path', '-')}")
+    print(f"Fullchain:    {certificate.get('fullchain_path', '-')}")
+
+
+def print_admin_credentials(credentials: dict | None) -> None:
+    if not credentials:
+        return
+    print()
+    if credentials.get("generated"):
+        print("Admin credentials generated.")
+        print(f"Username:     {credentials['username']}")
+        print(f"Password:     {credentials['password']}")
+        print("Save this password now. It will not be shown again.")
+    else:
+        print("Admin credentials: existing")
+
+
+def command_web_start(args: argparse.Namespace) -> int:
+    intermediate_password = None
+    if args.intermediate_key_encrypted:
+        intermediate_password = getpass.getpass("Enter password for Intermediate CA private key: ")
 
     try:
-        root_out = TRUST_EXPORT_DIR / "root.crt.pem"
-        intermediate_out = TRUST_EXPORT_DIR / "intermediate.crt.pem"
-        chain_out = TRUST_EXPORT_DIR / "ca-chain.pem"
+        try:
+            result = run_web_start(args, intermediate_password)
+        except WebCertificateActionRequired as exc:
+            if not sys.stdin.isatty():
+                print(f"Error: {exc}")
+                print("Run the command from an interactive terminal to choose how to handle existing web artifacts.")
+                return 1
+            action = choose_web_certificate_action(exc.status)
+            if action is None:
+                print("Cancelled.")
+                return 1
+            result = run_web_start(args, intermediate_password, action)
 
-        copy_file(ROOT_CERT_PATH, root_out)
-        copy_file(INTERMEDIATE_CERT_PATH, intermediate_out)
-        write_chain([INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH], chain_out)
+        print("pkica web started.")
+        print(f"Trust URL:    {result['url']}")
+        print(f"Admin URL:    {result['admin_url']}")
+        print(f"PID:          {result['pid']}")
+        print(f"Nginx config: {result['nginx_conf']}")
+        print_web_certificate_info(result.get("certificate"))
+        print_admin_credentials(result.get("admin_credentials"))
+        if not args.configure_nginx:
+            print()
+            print("Manual nginx setup:")
+            print(f"sudo cp {result['nginx_conf']} /etc/nginx/sites-available/pkica-web.conf")
+            print("sudo ln -sf /etc/nginx/sites-available/pkica-web.conf /etc/nginx/sites-enabled/pkica-web.conf")
+            print("sudo nginx -t")
+            print("sudo systemctl restart nginx")
+        else:
+            print(f"System nginx: {result['system_nginx']['message']}")
+        return 0
+    except Exception as exc:
+        if str(exc) == "Password was not given but private key is encrypted":
+            print("Error: Intermediate CA private key is encrypted.")
+            print("Run: pkica web start --intermediate-key-encrypted")
+            return 1
+        print(f"Error: {exc}")
+        return 1
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+
+def command_web_stop(args: argparse.Namespace) -> int:
+    result = stop_web()
+    if result.get("stopped"):
+        print(f"pkica web stopped. PID: {result['pid']}")
+    else:
+        print(result.get("message", "pkica web was not running."))
+    return 0
+
+
+def command_web_status(args: argparse.Namespace) -> int:
+    status = web_status()
+    print("pkica web status")
+    print("-" * 60)
+    if status["certificate"]:
+        print(f"Web certificate: {status['certificate']['path']}")
+        print(f"Valid until:     {status['certificate']['not_valid_after']}")
+    else:
+        print("Web certificate: not found")
+    print(f"FastAPI PID:     {status['pid'] or '-'}")
+    print(f"FastAPI status:  {'running' if status['running'] else 'stopped'}")
+    print(f"Nginx config:    {status['nginx_conf']}")
+    print(f"System nginx:    {'configured by pkica' if status['system_nginx_configured'] else 'not configured by pkica'}")
+    return 0
+
+def command_export_trust(args: argparse.Namespace) -> int:
+    try:
+        exported = export_trust_bundle()
+
+        append_cli_audit(
             {
                 "action": "export.trust",
-                "output_dir": str(TRUST_EXPORT_DIR),
+                "output_dir": exported["output_dir"],
             },
         )
 
         print("Trust certificates exported successfully.")
-        print(f"Root CA:         {root_out}")
-        print(f"Intermediate CA: {intermediate_out}")
-        print(f"CA chain:        {chain_out}")
+        print(f"Root CA:         {exported['root']['export_path']}")
+        print(f"  SHA256:        {exported['root']['fingerprint_sha256']}")
+        print(f"Intermediate CA: {exported['intermediate']['export_path']}")
+        print(f"  SHA256:        {exported['intermediate']['fingerprint_sha256']}")
+        print(f"CA chain:        {exported['chain']['export_path']}")
+        print(f"  SHA256:        {exported['chain']['fingerprint_sha256']}")
         return 0
 
     except Exception as exc:
@@ -920,8 +1047,7 @@ def command_export_nginx(args: argparse.Namespace) -> int:
             encoding="utf-8",
         )
 
-        append_jsonl(
-            AUDIT_LOG_PATH,
+        append_cli_audit(
             {
                 "action": "export.nginx",
                 "serial_number": serial,
@@ -1123,6 +1249,26 @@ def build_parser() -> argparse.ArgumentParser:
     export_nginx = export_subparsers.add_parser("nginx", help="Export server certificate files for Nginx")
     export_nginx.add_argument("--serial", required=True, help="Server certificate serial number")
     export_nginx.set_defaults(func=command_export_nginx)
+
+    web_parser = subparsers.add_parser("web", help="Web interface commands")
+    web_subparsers = web_parser.add_subparsers(dest="web_command")
+
+    web_start = web_subparsers.add_parser("start", help="Start FastAPI web interface")
+    web_start.add_argument("--host", default="pkica.local", help="Public HTTPS host name")
+    web_start.add_argument("--port", type=int, default=8000, help="Local FastAPI port")
+    web_start.add_argument("--configure-nginx", action="store_true", help="Install generated config into system nginx")
+    web_start.add_argument(
+        "--intermediate-key-encrypted",
+        action="store_true",
+        help="Use if Intermediate CA private key is encrypted",
+    )
+    web_start.set_defaults(func=command_web_start)
+
+    web_stop = web_subparsers.add_parser("stop", help="Stop FastAPI web interface")
+    web_stop.set_defaults(func=command_web_stop)
+
+    web_status_parser = web_subparsers.add_parser("status", help="Show web interface status")
+    web_status_parser.set_defaults(func=command_web_status)
 
     return parser
 

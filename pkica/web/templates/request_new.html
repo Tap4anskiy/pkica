@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Новая CSR-заявка</h1>
+    <p>Отправьте CSR в PEM-формате и выберите профиль будущего сертификата.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/admin/requests">К заявкам</a>
+  </div>
+</div>
+
+<section class="content-layout">
+  <article class="panel content-main">
+    <h2>CSR</h2>
+    <form method="post" action="/admin/requests" class="stack">
+      <label>Профиль
+        <select name="profile">
+          <option value="server_tls" {% if profile == "server_tls" %}selected{% endif %}>server_tls</option>
+          <option value="client_tls" {% if profile == "client_tls" %}selected{% endif %}>client_tls</option>
+        </select>
+      </label>
+      <label>CSR PEM
+        <textarea name="csr" rows="16" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>
+      </label>
+      <button>Отправить заявку</button>
+    </form>
+  </article>
+
+  <aside class="panel content-side">
+    <h2>Проверяется автоматически</h2>
+    <ul class="check-list">
+      <li>корректность PEM и CSR;</li>
+      <li>соответствие выбранному профилю;</li>
+      <li>CN и SAN из запроса.</li>
+    </ul>
+  </aside>
+</section>
+{% endblock %}

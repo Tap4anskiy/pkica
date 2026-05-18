@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Проверка сертификата</h1>
+    <p>Проверьте цепочку доверия, срок действия и статус отзыва.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/admin/certificates">Сертификаты</a>
+  </div>
+</div>
+
+<section class="content-layout">
+  <article class="panel content-main">
+    <h2>Источник сертификата</h2>
+    <form method="post" action="/admin/verify" class="stack">
+      <label>Сертификат из списка
+        <select name="serial">
+          <option value="">Не выбран</option>
+          {% for cert in certificates %}
+          <option value="{{ cert.serial_number }}" {% if selected_serial == cert.serial_number %}selected{% endif %}>
+            {{ cert.label }} / {{ cert.profile }} / {{ cert.display_status }} / {{ cert.serial_number }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>PEM
+        <textarea name="pem" rows="12" placeholder="-----BEGIN CERTIFICATE-----">{{ pem or "" }}</textarea>
+      </label>
+      <label>или путь внутри стенда
+        <input name="path" value="{{ path or "" }}" placeholder="data/issued/example.crt.pem">
+      </label>
+      <button>Проверить</button>
+    </form>
+  </article>
+
+  <aside class="panel content-side">
+    <h2>Что будет проверено</h2>
+    <ul class="check-list">
+      <li>подпись Intermediate CA;</li>
+      <li>цепочка до Root CA;</li>
+      <li>срок действия сертификата;</li>
+      <li>CRL, если он опубликован.</li>
+    </ul>
+  </aside>
+</section>
+
+{% if result %}
+<section class="panel">
+  <div class="section-head">
+    <h2>Результат проверки</h2>
+    <span class="badge {{ 'ok' if result.chain_valid and not result.revoked else 'bad' }}">
+      {{ "OK" if result.chain_valid and not result.revoked else "ошибка" }}
+    </span>
+  </div>
+  <div class="verify-summary">
+    <div class="summary-item">
+      <span>Цепочка доверия</span>
+      <strong>
+        <span class="badge {{ 'ok' if result.chain_valid else 'bad' }}">
+          {{ "проверена" if result.chain_valid else "ошибка" }}
+        </span>
+      </strong>
+    </div>
+    <div class="summary-item">
+      <span>Статус отзыва</span>
+      <strong>
+        <span class="badge {{ 'bad' if result.revoked else 'ok' }}">
+          {{ "отозван" if result.revoked else "не отозван" }}
+        </span>
+      </strong>
+    </div>
+    <div class="summary-item">
+      <span>CRL</span>
+      <strong>{{ "проверен" if result.crl_checked else "не опубликован" }}</strong>
+    </div>
+  </div>
+  <dl class="detail-list verify-result">
+    <dt>Serial Number</dt>
+    <dd><code>{{ result.serial_number }}</code></dd>
+    <dt>Subject</dt>
+    <dd>{{ result.subject }}</dd>
+    <dt>Issuer</dt>
+    <dd>{{ result.issuer }}</dd>
+    <dt>Trust Chain</dt>
+    <dd>{{ result.trust_chain }}</dd>
+  </dl>
+</section>
+{% endif %}
+{% endblock %}

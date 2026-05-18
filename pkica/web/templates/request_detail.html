@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Заявка #{{ item.id }}</h1>
+    <p>{{ item.cn or item.subject or "CSR-заявка" }}</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/admin/requests">К списку</a>
+    {% if item.issued_serial_number %}
+    <a class="button-link" href="/admin/certificates/{{ item.issued_serial_number }}">Открыть сертификат</a>
+    {% endif %}
+  </div>
+</div>
+
+<section class="cert-summary">
+  <div class="summary-item">
+    <span>Статус</span>
+    <strong><span class="status-pill {{ item.status }}">{{ item.status }}</span></strong>
+  </div>
+  <div class="summary-item">
+    <span>Профиль</span>
+    <strong>{{ item.profile }}</strong>
+  </div>
+  <div class="summary-item">
+    <span>CN</span>
+    <strong>{{ item.cn or "-" }}</strong>
+  </div>
+  <div class="summary-item">
+    <span>Проверка профиля</span>
+    <strong><span class="badge {{ 'ok' if validation.ok else 'bad' }}">{{ "OK" if validation.ok else "ошибка" }}</span></strong>
+  </div>
+</section>
+
+<section class="certificate-layout">
+  <article class="panel cert-main">
+    <h2>Данные CSR</h2>
+    <dl class="detail-list">
+      <dt>Subject</dt>
+      <dd>{{ item.subject }}</dd>
+      <dt>SAN</dt>
+      <dd>{{ item.san or "-" }}</dd>
+      <dt>Создана</dt>
+      <dd>{{ item.created_at|datetime }}</dd>
+      <dt>Проверка</dt>
+      <dd>{{ validation.message }}</dd>
+      {% if item.stored_csr_path %}
+      <dt>CSR-файл</dt>
+      <dd><code>{{ item.stored_csr_path }}</code></dd>
+      {% endif %}
+      {% if item.rejection_reason %}
+      <dt>Причина отказа</dt>
+      <dd>{{ item.rejection_reason }}</dd>
+      {% endif %}
+    </dl>
+  </article>
+
+  <aside class="panel cert-side">
+    <h2>Управление</h2>
+    {% if item.status == "pending" %}
+    <p class="state-note ok">Заявка ожидает решения. После одобрения можно выпустить сертификат.</p>
+    <form class="stack action-stack" method="post" action="/admin/requests/{{ item.id }}/approve" onsubmit="return confirm('Одобрить заявку #{{ item.id }}?')">
+      <button>Одобрить заявку</button>
+    </form>
+    <div class="danger-zone">
+      <h3>Отклонение</h3>
+      <p>Укажите понятную причину, чтобы она осталась в карточке заявки.</p>
+      <form class="revoke-form" method="post" action="/admin/requests/{{ item.id }}/reject" onsubmit="return confirm('Отклонить заявку #{{ item.id }}?')">
+        <label for="reject-reason">Причина</label>
+        <input id="reject-reason" name="reason" placeholder="Например: профиль не соответствует CSR">
+        <button class="danger">Отклонить заявку</button>
+      </form>
+    </div>
+    {% elif item.status == "approved" %}
+    <p class="state-note ok">Заявка одобрена и готова к выпуску сертификата.</p>
+    <form class="stack action-stack" method="post" action="/admin/requests/{{ item.id }}/issue" onsubmit="return confirm('Выпустить сертификат по заявке #{{ item.id }}?')">
+      <button>Выпустить сертификат</button>
+    </form>
+    {% elif item.status == "issued" %}
+    <p class="state-note ok">По заявке уже выпущен сертификат.</p>
+    <a class="button-link" href="/admin/certificates/{{ item.issued_serial_number }}">Открыть сертификат</a>
+    {% else %}
+    <p class="state-note bad">Заявка закрыта без выпуска сертификата.</p>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

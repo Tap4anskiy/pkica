@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Заявки</h1>
+    <p>Очередь CSR-заявок с фильтрацией по текущему состоянию.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link" href="/admin/requests/new">Новая CSR</a>
+  </div>
+</div>
+
+<section class="panel">
+  <form method="get" class="toolbar filter-toolbar">
+    <label>Статус
+      <select name="status">
+        <option value="">Все заявки</option>
+        {% for s in ["pending", "approved", "rejected", "issued"] %}
+        <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button>Применить</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <h2>Реестр заявок</h2>
+    <span class="muted">{{ requests|length }} шт.</span>
+  </div>
+  {% if requests %}
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>CN</th>
+        <th>Профиль</th>
+        <th>Статус</th>
+        <th>Создана</th>
+        <th>SAN</th>
+        <th></th>
+      </tr>
+      {% for item in requests %}
+      <tr>
+        <td><strong>#{{ item.id }}</strong></td>
+        <td>{{ item.cn or "-" }}</td>
+        <td>{{ item.profile }}</td>
+        <td><span class="status-pill {{ item.status }}">{{ item.status }}</span></td>
+        <td>{{ item.created_at|datetime }}</td>
+        <td>{{ item.san or "-" }}</td>
+        <td><a href="/admin/requests/{{ item.id }}">Открыть</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Заявок с выбранным фильтром нет.</p>
+  {% endif %}
+</section>
+{% endblock %}

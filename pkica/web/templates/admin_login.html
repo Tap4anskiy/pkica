@@ -1,0 +1,19 @@
+{% extends "public_base.html" %}
+{% block content %}
+<section class="login-shell">
+  <form class="panel login-panel" method="post" action="/admin/login">
+    <h1>pkica admin</h1>
+    <p class="muted">Вход в панель управления УЦ.</p>
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>
+      Логин
+      <input name="username" autocomplete="username" value="{{ username or '' }}" autofocus>
+    </label>
+    <label>
+      Пароль
+      <input type="password" name="password" autocomplete="current-password">
+    </label>
+    <button>Войти</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Сертификаты</h1>
+    <p>Выпуск, просмотр и контроль выданных сертификатов Intermediate CA.</p>
+  </div>
+  <div class="head-actions">
+    <a class="button-link secondary" href="/admin/requests/new">Новая CSR</a>
+    <a class="button-link secondary" href="/admin/verify">Проверить сертификат</a>
+  </div>
+</div>
+
+<section class="panel issue-panel">
+  <h2>Выпуск сертификата</h2>
+  <div class="issue-switch">
+    <input id="issue-by-request" name="issue-mode" type="radio" {% if not csr %}checked{% endif %}>
+    <label for="issue-by-request">По заявке</label>
+    <input id="issue-by-csr" name="issue-mode" type="radio" {% if csr %}checked{% endif %}>
+    <label for="issue-by-csr">Из CSR</label>
+
+    <div class="issue-mode issue-mode-request">
+      <form class="stack" method="post" action="/admin/certificates/issue/request">
+        <label>Одобренная заявка
+          <select name="request_id" required>
+            <option value="" disabled {% if not issue_request_id %}selected{% endif %}>Выберите заявку</option>
+            {% for item in approved_requests %}
+            <option value="{{ item.id }}" {% if issue_request_id|string == item.id|string %}selected{% endif %}>#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Срок действия, дней
+          <input name="days" type="number" min="1" step="1" value="{{ issue_request_days or default_days }}" required>
+        </label>
+        <button>Выпустить сертификат</button>
+      </form>
+      {% if approved_requests %}
+      <div class="mini-list">
+        <strong>Одобренные заявки</strong>
+        {% for item in approved_requests %}
+        <a href="/admin/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Одобренных заявок пока нет.</p>
+      {% endif %}
+    </div>
+
+    <div class="issue-mode issue-mode-csr">
+      <p class="state-note bad">Админский выпуск напрямую из CSR обходит очередь заявок. Используйте его только для ручных операций.</p>
+      <form class="stack" method="post" action="/admin/certificates/issue/csr" onsubmit="return confirm('Выпустить сертификат напрямую из CSR?')">
+        <label>Профиль
+          <select name="profile">
+            {% for profile in profiles %}
+            <option value="{{ profile }}" {% if (csr_profile or "server_tls") == profile %}selected{% endif %}>{{ profile }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Срок действия, дней
+          <input name="days" type="number" min="1" step="1" value="{{ csr_days or default_days }}" required>
+        </label>
+        <label>CSR PEM
+          <textarea name="csr" rows="9" placeholder="-----BEGIN CERTIFICATE REQUEST-----" required>{{ csr or "" }}</textarea>
+        </label>
+        <button>Выпустить из CSR</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <h2>Реестр сертификатов</h2>
+    <span class="muted">{{ certificates|length }} отображается</span>
+  </div>
+  <form class="registry-controls" method="get" action="/admin/certificates">
+    <label class="registry-control registry-control-sort">
+      <span>Сортировка</span>
+      <select class="registry-select-sort" name="sort">
+        {% for value, label in certificate_registry.sorts %}
+        <option value="{{ value }}" {% if certificate_registry.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="registry-control registry-control-limit">
+      <span>Показать</span>
+      <select class="registry-select-limit" name="limit">
+        {% for value in certificate_registry.limits %}
+        <option value="{{ value }}" {% if certificate_registry.limit == value %}selected{% endif %}>
+          {{ "Все" if value == "all" else value }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <button>Применить</button>
+  </form>
+  {% if certificates %}
+  <div class="table-wrap">
+    <table>
+      <tr>
+        <th>Serial</th>
+        <th>Subject</th>
+        <th>Профиль</th>
+        <th>Начало</th>
+        <th>Окончание</th>
+        <th>Статус</th>
+        <th></th>
+      </tr>
+      {% for cert in certificates %}
+      <tr>
+        <td><code>{{ cert.serial_number }}</code></td>
+        <td>{{ cert.subject }}</td>
+        <td>{{ cert.profile }}</td>
+        <td>{{ cert.not_valid_before|datetime }}</td>
+        <td>{{ cert.not_valid_after|datetime }}</td>
+        <td><span class="status-pill {{ cert.display_status }}">{{ cert.display_status }}</span></td>
+        <td><a href="/admin/certificates/{{ cert.serial_number }}">Открыть</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Сертификаты пока не выпускались.</p>
+  {% endif %}
+</section>
+{% endblock %}
