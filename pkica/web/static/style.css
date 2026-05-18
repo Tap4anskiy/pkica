@@ -1,8 +1,12 @@
 body {
   margin: 0;
-  background: #F2F2F2;
+  background: #F6F6F6;
   color: #4D4D4D;
   font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+a {
+  color: #D86F00;
 }
 
 .topbar {
@@ -11,12 +15,20 @@ body {
   align-items: center;
   flex-wrap: wrap;
   background: #000000;
+  border-bottom: 4px solid #F7941D;
   padding: 14px 24px;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 10%);
 }
 
 .topbar a {
   color: #FFFFFF;
   text-decoration: none;
+  opacity: 0.88;
+}
+
+.topbar a:hover {
+  color: #F7941D;
+  opacity: 1;
 }
 
 .topbar-form {
@@ -26,7 +38,14 @@ body {
 .topbar-form button {
   border: 1px solid rgb(255 255 255 / 28%);
   background: transparent;
+  color: #FFFFFF;
   padding: 7px 10px;
+  box-shadow: none;
+}
+
+.topbar-form button:hover {
+  border-color: #F7941D;
+  color: #F7941D;
 }
 
 main {
@@ -57,7 +76,7 @@ h2 {
 
 .page-head p {
   margin: 6px 0 0;
-  color: #4D4D4D;
+  color: #666666;
 }
 
 .head-actions {
@@ -73,10 +92,22 @@ h2 {
   color: #FFFFFF;
   padding: 9px 14px;
   text-decoration: none;
+  box-shadow: 0 8px 18px rgb(247 148 29 / 18%);
 }
 
 .button-link.secondary {
   background: #4D4D4D;
+  box-shadow: none;
+}
+
+.button-link:hover,
+button:hover {
+  background: #D86F00;
+}
+
+.button-link.secondary:hover,
+.secondary-button:hover {
+  background: #333333;
 }
 
 .metrics-grid {
@@ -88,9 +119,11 @@ h2 {
 
 .metric {
   background: #FFFFFF;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
+  border-top: 3px solid #F7941D;
   border-radius: 8px;
   padding: 16px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .metric.needs-action {
@@ -104,7 +137,7 @@ h2 {
 }
 
 .metric span {
-  color: #4D4D4D;
+  color: #666666;
 }
 
 .metric strong {
@@ -114,7 +147,7 @@ h2 {
 }
 
 .metric a {
-  color: #F7941D;
+  color: #D86F00;
   text-decoration: none;
 }
 
@@ -127,10 +160,11 @@ h2 {
 
 .panel {
   background: #FFFFFF;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .login-shell {
@@ -180,12 +214,16 @@ h2 {
 }
 
 .issue-switch > label {
-  border: 1px solid #BFBFBF;
+  border: 1px solid #D9D9D9;
   border-radius: 6px;
   background: #FFFFFF;
   color: #4D4D4D;
   padding: 8px 12px;
   cursor: pointer;
+}
+
+.issue-switch > label:hover {
+  border-color: #F7941D;
 }
 
 .issue-switch > input:checked + label {
@@ -218,12 +256,12 @@ h2 {
 }
 
 .mini-list a {
-  color: #F7941D;
+  color: #D86F00;
   text-decoration: none;
 }
 
 .muted {
-  color: #4D4D4D;
+  color: #666666;
 }
 
 .chain-list {
@@ -232,9 +270,9 @@ h2 {
 }
 
 .chain-item {
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
   border-radius: 8px;
-  background: #FFFFFF;
+  background: #FAFAFA;
   padding: 14px;
 }
 
@@ -247,7 +285,7 @@ h2 {
 
 .chain-role {
   display: block;
-  color: #4D4D4D;
+  color: #666666;
   font-size: 13px;
 }
 
@@ -268,7 +306,7 @@ h2 {
 }
 
 .chain-details dt {
-  color: #4D4D4D;
+  color: #666666;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -286,16 +324,19 @@ h2 {
   border-radius: 999px;
   padding: 3px 9px;
   font-size: 13px;
+  border: 1px solid transparent;
 }
 
 .badge.ok {
   background: #F2F2F2;
   color: #4D4D4D;
+  border-color: #D9D9D9;
 }
 
 .badge.bad {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-color: #F7941D;
 }
 
 .status-pill {
@@ -305,6 +346,7 @@ h2 {
   background: #F2F2F2;
   color: #4D4D4D;
   font-size: 13px;
+  border: 1px solid #D9D9D9;
 }
 
 .status-pill.issued,
@@ -318,12 +360,14 @@ h2 {
 .status-pill.revoked,
 .status-pill.rejected {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-color: #F7941D;
 }
 
 .status-pill.expired {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-color: #F7941D;
 }
 
 .compact-table {
@@ -382,14 +426,16 @@ h2 {
 
 .summary-item {
   background: #FFFFFF;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
+  border-top: 3px solid #F7941D;
   border-radius: 8px;
   padding: 14px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .summary-item span {
   display: block;
-  color: #4D4D4D;
+  color: #666666;
 }
 
 .summary-item strong {
@@ -443,11 +489,13 @@ h2 {
 .state-note.ok {
   background: #F2F2F2;
   color: #4D4D4D;
+  border-left: 4px solid #4D4D4D;
 }
 
 .state-note.bad {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-left: 4px solid #F7941D;
 }
 
 .danger-zone {
@@ -464,7 +512,7 @@ h2 {
 
 .danger-zone p {
   margin: 0 0 12px;
-  color: #4D4D4D;
+  color: #8A4A00;
 }
 
 .check-list {
@@ -494,9 +542,9 @@ h2 {
 }
 
 .result-block {
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
   border-radius: 8px;
-  background: #FFFFFF;
+  background: #FAFAFA;
   margin: 0;
   padding: 14px;
 }
@@ -538,7 +586,7 @@ h2 {
 }
 
 .audit-row-ok td:first-child {
-  border-left-color: #4D4D4D;
+  border-left-color: #F7941D;
 }
 
 .audit-row-bad td:first-child {
@@ -555,7 +603,7 @@ h2 {
 }
 
 .audit-time {
-  color: #4D4D4D;
+  color: #666666;
   white-space: nowrap;
 }
 
@@ -567,14 +615,14 @@ h2 {
 
 .audit-object-links a,
 .audit-modal a {
-  color: #F7941D;
+  color: #D86F00;
   text-decoration: none;
 }
 
 .link-button {
   border: 0;
   background: transparent;
-  color: #F7941D;
+  color: #D86F00;
   padding: 0;
   cursor: pointer;
   font: inherit;
@@ -633,7 +681,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: #FFFFFF;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
 }
 
 th,
@@ -645,7 +693,8 @@ td {
 }
 
 th {
-  background: #F2F2F2;
+  background: #4D4D4D;
+  color: #FFFFFF;
 }
 
 textarea,
@@ -653,10 +702,18 @@ input,
 select {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #BFBFBF;
+  border: 1px solid #D1D1D1;
   border-radius: 6px;
   padding: 9px;
   background: #FFFFFF;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: #F7941D;
+  box-shadow: 0 0 0 3px rgb(247 148 29 / 18%);
+  outline: none;
 }
 
 select {
@@ -670,6 +727,7 @@ button {
   color: #FFFFFF;
   padding: 9px 14px;
   cursor: pointer;
+  box-shadow: 0 8px 18px rgb(247 148 29 / 18%);
 }
 
 .registry-controls {
@@ -756,12 +814,14 @@ button {
 
 .error {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-left: 4px solid #F7941D;
 }
 
 .warning {
   background: #FFF4E6;
-  color: #4D4D4D;
+  color: #8A4A00;
+  border-left: 4px solid #F7941D;
 }
 
 dl {
@@ -769,7 +829,7 @@ dl {
   grid-template-columns: 180px 1fr;
   gap: 8px 14px;
   background: #FFFFFF;
-  border: 1px solid #D9D9D9;
+  border: 1px solid #E2E2E2;
   border-radius: 8px;
   padding: 16px;
 }
