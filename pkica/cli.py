@@ -24,7 +24,6 @@ from pkica.config import (
     CRL_PATH,
     REVOKED_DB_PATH,
     NGINX_EXPORT_DIR,
-    TRUST_EXPORT_DIR,
     ensure_ca_directories,
 )
 from pkica.pki.ca import (
@@ -66,9 +65,10 @@ from pkica.pki.crl import REASON_MAP, create_crl, save_crl
 from pkica.storage.revocations import add_revocation, load_revocations
 from pkica.storage.status import count_by_status, load_json_list
 from pkica.pki.verify import verify_certificate_chain
-from pkica.storage.export import copy_file, write_chain
+from pkica.storage.export import copy_file
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
+from pkica.services.trust_service import export_trust_bundle
 from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, start_web, stop_web, web_status
 
 
@@ -940,28 +940,23 @@ def command_web_status(args: argparse.Namespace) -> int:
     return 0
 
 def command_export_trust(args: argparse.Namespace) -> int:
-    ensure_ca_directories()
-
     try:
-        root_out = TRUST_EXPORT_DIR / "root.crt.pem"
-        intermediate_out = TRUST_EXPORT_DIR / "intermediate.crt.pem"
-        chain_out = TRUST_EXPORT_DIR / "ca-chain.pem"
-
-        copy_file(ROOT_CERT_PATH, root_out)
-        copy_file(INTERMEDIATE_CERT_PATH, intermediate_out)
-        write_chain([INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH], chain_out)
+        exported = export_trust_bundle()
 
         append_cli_audit(
             {
                 "action": "export.trust",
-                "output_dir": str(TRUST_EXPORT_DIR),
+                "output_dir": exported["output_dir"],
             },
         )
 
         print("Trust certificates exported successfully.")
-        print(f"Root CA:         {root_out}")
-        print(f"Intermediate CA: {intermediate_out}")
-        print(f"CA chain:        {chain_out}")
+        print(f"Root CA:         {exported['root']['export_path']}")
+        print(f"  SHA256:        {exported['root']['fingerprint_sha256']}")
+        print(f"Intermediate CA: {exported['intermediate']['export_path']}")
+        print(f"  SHA256:        {exported['intermediate']['fingerprint_sha256']}")
+        print(f"CA chain:        {exported['chain']['export_path']}")
+        print(f"  SHA256:        {exported['chain']['fingerprint_sha256']}")
         return 0
 
     except Exception as exc:

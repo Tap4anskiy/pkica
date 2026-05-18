@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Trust Center</h1>
+    <p>Публичные сертификаты УЦ и контрольные отпечатки для безопасной установки доверия.</p>
+  </div>
+  <div class="head-actions">
+    {% if trust.ready %}
+    <a class="button-link" href="{{ trust.chain.download_url }}">Скачать CA chain</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if trust.warnings %}
+<div class="alert warning">
+  {% for warning in trust.warnings %}
+  <div>{{ warning }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<section class="cert-summary">
+  {% for artifact in trust.artifacts %}
+  <div class="summary-item">
+    <span>{{ artifact.label }}</span>
+    <strong><span class="badge {{ 'ok' if artifact.exists else 'bad' }}">{{ "доступен" if artifact.exists else "не найден" }}</span></strong>
+  </div>
+  {% endfor %}
+  <div class="summary-item">
+    <span>CA chain</span>
+    <strong><span class="badge {{ 'ok' if trust.chain.exists else 'bad' }}">{{ "готов" if trust.chain.exists else "не готов" }}</span></strong>
+  </div>
+</section>
+
+<section class="certificate-layout">
+  <article class="panel cert-main">
+    <div class="section-head">
+      <h2>Сертификаты доверия</h2>
+      <span class="muted">SHA256 сверяйте по независимому каналу</span>
+    </div>
+    <div class="chain-list">
+      {% for artifact in trust.artifacts %}
+      <section class="chain-item">
+        <div class="chain-heading">
+          <div>
+            <span class="chain-role">{{ artifact.role }}</span>
+            <strong>{{ artifact.name if artifact.exists else artifact.label }}</strong>
+          </div>
+          {% if artifact.exists %}
+          <a class="button-link secondary" href="{{ artifact.download_url }}">Скачать</a>
+          {% else %}
+          <span class="badge bad">не найден</span>
+          {% endif %}
+        </div>
+        <dl class="chain-details trust-details">
+          <dt>Subject</dt>
+          <dd>{{ artifact.subject if artifact.exists else "-" }}</dd>
+          <dt>Issuer</dt>
+          <dd>{{ artifact.issuer if artifact.exists else "-" }}</dd>
+          <dt>Срок</dt>
+          <dd>{% if artifact.exists %}{{ artifact.not_valid_before|datetime }} - {{ artifact.not_valid_after|datetime }}{% else %}-{% endif %}</dd>
+          <dt>SHA256</dt>
+          <dd><code>{{ artifact.fingerprint_sha256 if artifact.exists else "-" }}</code></dd>
+          <dt>Serial</dt>
+          <dd><code>{{ artifact.serial_number if artifact.exists else "-" }}</code></dd>
+          <dt>Key Usage</dt>
+          <dd>{{ artifact.key_usage if artifact.exists else "-" }}</dd>
+          <dt>Basic Constraints</dt>
+          <dd>{{ artifact.basic_constraints if artifact.exists else "-" }}</dd>
+          <dt>Путь</dt>
+          <dd><code>{{ artifact.path }}</code></dd>
+        </dl>
+      </section>
+      {% endfor %}
+    </div>
+  </article>
+
+  <aside class="panel cert-side">
+    <h2>Bundle</h2>
+    {% if trust.chain.exists %}
+    <p class="state-note ok">Цепочка собрана из текущих Root CA и Intermediate CA.</p>
+    <dl class="plain-list">
+      <dt>Файл</dt>
+      <dd><code>{{ trust.chain.download_name }}</code></dd>
+      <dt>SHA256</dt>
+      <dd><code>{{ trust.chain.fingerprint_sha256 }}</code></dd>
+      <dt>Размер</dt>
+      <dd>{{ trust.chain.size }} bytes</dd>
+    </dl>
+    <a class="button-link" href="{{ trust.chain.download_url }}">Скачать CA chain</a>
+    {% else %}
+    <p class="state-note bad">Для сборки цепочки нужны оба CA-сертификата.</p>
+    {% endif %}
+  </aside>
+</section>
+
+<section class="panel">
+  <h2>Как выдавать trust пользователям</h2>
+  <ol class="check-list">
+    <li>Пользователь скачивает <code>ca-chain.pem</code> с этой страницы.</li>
+    <li>Администратор передает SHA256 Root CA и Intermediate CA через независимый канал.</li>
+    <li>Пользователь сверяет отпечатки перед установкой в системное или прикладное хранилище доверия.</li>
+  </ol>
+</section>
+{% endblock %}

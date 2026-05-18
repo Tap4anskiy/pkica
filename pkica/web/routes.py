@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
@@ -30,6 +30,7 @@ from pkica.services.request_service import (
     submit_csr_pem,
 )
 from pkica.services.status_service import cert_info, get_status
+from pkica.services.trust_service import TRUST_DOWNLOADS, trust_center_status, trust_chain_bytes
 from pkica.pki.crl import REASON_MAP
 from pkica.config import BASE_DIR, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
 
@@ -434,6 +435,30 @@ def crl_publish(request: Request) -> Response:
         return RedirectResponse("/crl", status_code=303)
     except Exception as exc:
         return render(request, "crl.html", {"crl": crl_info(), "error": str(exc)}, 400)
+
+
+@router.get("/trust", response_class=HTMLResponse)
+def trust_page(request: Request) -> HTMLResponse:
+    return render(request, "trust.html", {"trust": trust_center_status()})
+
+
+@router.get("/trust/download/{name}")
+def trust_download(name: str) -> Response:
+    if name == "ca-chain.pem":
+        try:
+            data = trust_chain_bytes()
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    elif name in TRUST_DOWNLOADS:
+        path = TRUST_DOWNLOADS[name]
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"Certificate file not found: {path}")
+        data = path.read_bytes()
+    else:
+        raise HTTPException(status_code=404, detail="Trust artifact not found.")
+
+    headers = {"Content-Disposition": f'attachment; filename="{name}"'}
+    return Response(data, media_type="application/x-pem-file", headers=headers)
 
 
 @router.get("/audit", response_class=HTMLResponse)
