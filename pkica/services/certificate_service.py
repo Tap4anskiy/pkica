@@ -150,14 +150,22 @@ def revoke_certificate(serial: str, reason: str = "unspecified", *, source: str 
     return updated
 
 
-def verify_certificate_path(cert_path: Path, *, check_crl: bool = True, source: str = "service") -> dict:
+def verify_certificate_path(
+    cert_path: Path,
+    *,
+    check_crl: bool = True,
+    source: str = "service",
+    audit: bool = True,
+) -> dict:
     crl_path = CRL_PATH if check_crl and CRL_PATH.exists() else None
     try:
         result = verify_certificate_chain(cert_path, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH, crl_path=crl_path)
-        log_event("verify", serial_number=result["serial_number"], result="success", source=source)
+        if audit:
+            log_event("verify", serial_number=result["serial_number"], result="success", source=source)
         return result
     except Exception as exc:
-        log_event("verify", result="failed", cert_path=str(cert_path), reason=str(exc), source=source)
+        if audit:
+            log_event("verify", result="failed", cert_path=str(cert_path), reason=str(exc), source=source)
         raise
 
 

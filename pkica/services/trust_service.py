@@ -122,7 +122,7 @@ def trust_center_status(expiring_days: int = 90) -> dict:
 
     for artifact in artifacts:
         if not artifact["exists"]:
-            warnings.append(f"{artifact['label']} certificate is missing: {artifact['path']}")
+            warnings.append(f"{artifact['label']} certificate is unavailable.")
             continue
         expires_at = datetime.fromisoformat(artifact["not_valid_after"])
         if expires_at <= datetime.now(timezone.utc):

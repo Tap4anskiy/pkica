@@ -166,7 +166,7 @@ def prepare_certificate_registry(sort: str = "issued_desc", limit: str = "50") -
 def certificate_detail_context(serial: str, extra: dict | None = None) -> dict:
     cert = get_certificate(serial)
     try:
-        verification = {"ok": True, "result": verify_certificate_path(Path(cert["cert_path"]), source="web")}
+        verification = {"ok": True, "result": verify_certificate_path(Path(cert["cert_path"]), source="web", audit=False)}
     except Exception as exc:
         verification = {"ok": False, "error": str(exc)}
 
@@ -282,6 +282,16 @@ def positive_days(value: str, default: int = 365) -> int:
     return days
 
 
+def is_not_found_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "not found" in message
+
+
+def raise_not_found(exc: Exception) -> None:
+    if is_not_found_error(exc):
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/", response_class=HTMLResponse)
 def root() -> Response:
     return RedirectResponse("/trust", status_code=303)
@@ -364,7 +374,11 @@ async def request_create(request: Request) -> Response:
 
 @router.get("/admin/requests/{request_id}", response_class=HTMLResponse)
 def request_detail(request: Request, request_id: int) -> HTMLResponse:
-    return render(request, "request_detail.html", request_detail_context(request_id))
+    try:
+        return render(request, "request_detail.html", request_detail_context(request_id))
+    except Exception as exc:
+        raise_not_found(exc)
+        raise
 
 
 @router.post("/admin/requests/{request_id}/approve")
@@ -373,6 +387,7 @@ def request_approve(request: Request, request_id: int) -> Response:
         approve_request(request_id, source="web")
         return RedirectResponse(f"/admin/requests/{request_id}", status_code=303)
     except Exception as exc:
+        raise_not_found(exc)
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
@@ -383,6 +398,7 @@ async def request_reject(request: Request, request_id: int) -> Response:
         reject_request(request_id, data.get("reason", "Rejected in web UI"), source="web")
         return RedirectResponse(f"/admin/requests/{request_id}", status_code=303)
     except Exception as exc:
+        raise_not_found(exc)
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
@@ -392,6 +408,7 @@ def request_issue(request: Request, request_id: int) -> Response:
         record = issue_certificate_from_request(request_id, source="web")
         return RedirectResponse(f"/admin/certificates/{record['serial_number']}", status_code=303)
     except Exception as exc:
+        raise_not_found(exc)
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
@@ -466,7 +483,11 @@ async def certificate_issue_from_csr(request: Request) -> Response:
 
 @router.get("/admin/certificates/{serial}", response_class=HTMLResponse)
 def certificate_detail(request: Request, serial: str) -> HTMLResponse:
-    return render(request, "certificate_detail.html", certificate_detail_context(serial))
+    try:
+        return render(request, "certificate_detail.html", certificate_detail_context(serial))
+    except Exception as exc:
+        raise_not_found(exc)
+        raise
 
 
 @router.post("/admin/certificates/{serial}/revoke")
@@ -476,6 +497,7 @@ async def certificate_revoke(request: Request, serial: str) -> Response:
         revoke_certificate(serial, data.get("reason", "unspecified"), source="web")
         return RedirectResponse(f"/admin/certificates/{serial}", status_code=303)
     except Exception as exc:
+        raise_not_found(exc)
         return render(request, "certificate_detail.html", certificate_detail_context(serial, {"error": str(exc)}), 400)
 
 
@@ -504,11 +526,11 @@ def trust_download(name: str) -> Response:
         try:
             data = trust_chain_bytes()
         except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+            raise HTTPException(status_code=404, detail="Trust artifact is unavailable.") from exc
     elif name in TRUST_DOWNLOADS:
         path = TRUST_DOWNLOADS[name]
         if not path.exists():
-            raise HTTPException(status_code=404, detail=f"Certificate file not found: {path}")
+            raise HTTPException(status_code=404, detail="Trust artifact is unavailable.")
         data = path.read_bytes()
     else:
         raise HTTPException(status_code=404, detail="Trust artifact not found.")

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import httpx
 import pytest
+from fastapi import HTTPException
 
 from pkica.config import (
     INTERMEDIATE_CERT_PATH,
@@ -37,8 +40,22 @@ from pkica.services import crl_service
 from pkica.services import trust_service
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_info, web_certificate_status
+from pkica.web.app import app
 from pkica.web import routes
 from pkica.web.routes import stand_certificate_path
+
+
+def run_async(coro):
+    return asyncio.run(coro)
+
+
+async def login_admin_client(username: str, password: str) -> httpx.AsyncClient:
+    transport = httpx.ASGITransport(app=app)
+    client = httpx.AsyncClient(transport=transport, base_url="https://testserver", follow_redirects=False)
+    response = await client.post("/admin/login", data={"username": username, "password": password})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin"
+    return client
 
 
 def test_certificate_status_counts_separates_active_expired_and_revoked() -> None:
@@ -278,3 +295,75 @@ def test_export_trust_prints_fingerprints(tmp_path: Path, monkeypatch: pytest.Mo
     assert "SHA256:" in output
     assert str(TRUST_EXPORT_DIR / "root.crt.pem") in output
     assert (TRUST_EXPORT_DIR / "ca-chain.pem").exists()
+
+
+def test_public_trust_does_not_expose_local_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    trust = trust_service.trust_center_status()
+
+    assert trust["warnings"] == [
+        "Root CA certificate is unavailable.",
+        "Intermediate CA certificate is unavailable.",
+    ]
+    assert "data/" not in json.dumps(trust["warnings"], ensure_ascii=False)
+
+    with pytest.raises(Exception) as root_download:
+        routes.trust_download("root.crt.pem")
+    assert "data/" not in str(root_download.value)
+
+    with pytest.raises(Exception) as chain_download:
+        routes.trust_download("ca-chain.pem")
+    assert "data/" not in str(chain_download.value)
+
+
+def test_admin_http_login_flow_and_protection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    credentials = auth_service.ensure_admin_credentials()
+
+    async def scenario() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="https://testserver", follow_redirects=False) as client:
+            protected = await client.get("/admin")
+            assert protected.status_code == 303
+            assert protected.headers["location"] == "/admin/login?next=/admin"
+
+            login = await client.post(
+                "/admin/login",
+                data={"username": credentials["username"], "password": credentials["password"]},
+            )
+            assert login.status_code == 303
+            assert "httponly" in login.headers["set-cookie"].lower()
+
+    run_async(scenario())
+
+
+def test_missing_admin_objects_return_404(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(Exception) as missing_cert:
+        routes.certificate_detail_context("missing")
+    with pytest.raises(HTTPException) as cert_response:
+        routes.raise_not_found(missing_cert.value)
+    assert cert_response.value.status_code == 404
+
+    with pytest.raises(Exception) as missing_request:
+        routes.request_detail_context(999999)
+    with pytest.raises(HTTPException) as request_response:
+        routes.raise_not_found(missing_request.value)
+    assert request_response.value.status_code == 404
+
+
+def test_certificate_detail_context_does_not_log_verify_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    create_test_ca()
+    generate_web_certificate("pkica.local")
+    serial = load_issued_records(ISSUED_DB_PATH)[0]["serial_number"]
+
+    before = len(audit_service.list_events(action="verify"))
+    context = routes.certificate_detail_context(serial)
+    after = len(audit_service.list_events(action="verify"))
+
+    assert context["cert"]["serial_number"] == serial
+    assert context["verification"]["ok"] is True
+    assert after == before
