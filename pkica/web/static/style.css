@@ -1,12 +1,12 @@
 body {
   margin: 0;
-  background: #F6F6F6;
+  background: #F2F2F2;
   color: #4D4D4D;
   font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
 }
 
 a {
-  color: #D86F00;
+  color: #F7941D;
 }
 
 .topbar {
@@ -15,9 +15,8 @@ a {
   align-items: center;
   flex-wrap: wrap;
   background: #000000;
-  border-bottom: 4px solid #F7941D;
+  border-bottom: 3px solid #F7941D;
   padding: 14px 24px;
-  box-shadow: 0 8px 22px rgb(0 0 0 / 10%);
 }
 
 .topbar a {
@@ -76,7 +75,7 @@ h2 {
 
 .page-head p {
   margin: 6px 0 0;
-  color: #666666;
+  color: #4D4D4D;
 }
 
 .head-actions {
@@ -92,7 +91,6 @@ h2 {
   color: #FFFFFF;
   padding: 9px 14px;
   text-decoration: none;
-  box-shadow: 0 8px 18px rgb(247 148 29 / 18%);
 }
 
 .button-link.secondary {
@@ -102,12 +100,12 @@ h2 {
 
 .button-link:hover,
 button:hover {
-  background: #D86F00;
+  background: #F7941D;
 }
 
 .button-link.secondary:hover,
 .secondary-button:hover {
-  background: #333333;
+  background: #000000;
 }
 
 .metrics-grid {
@@ -119,16 +117,14 @@ button:hover {
 
 .metric {
   background: #FFFFFF;
-  border: 1px solid #E2E2E2;
-  border-top: 3px solid #F7941D;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .metric.needs-action {
   border-color: #F7941D;
-  background: #FFF4E6;
+  background: #F2F2F2;
 }
 
 .metric span,
@@ -137,7 +133,7 @@ button:hover {
 }
 
 .metric span {
-  color: #666666;
+  color: #4D4D4D;
 }
 
 .metric strong {
@@ -147,7 +143,7 @@ button:hover {
 }
 
 .metric a {
-  color: #D86F00;
+  color: #F7941D;
   text-decoration: none;
 }
 
@@ -160,11 +156,10 @@ button:hover {
 
 .panel {
   background: #FFFFFF;
-  border: 1px solid #E2E2E2;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .login-shell {
@@ -256,12 +251,12 @@ button:hover {
 }
 
 .mini-list a {
-  color: #D86F00;
+  color: #F7941D;
   text-decoration: none;
 }
 
 .muted {
-  color: #666666;
+  color: #4D4D4D;
 }
 
 .chain-list {
@@ -270,9 +265,9 @@ button:hover {
 }
 
 .chain-item {
-  border: 1px solid #E2E2E2;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
-  background: #FAFAFA;
+  background: #FFFFFF;
   padding: 14px;
 }
 
@@ -285,7 +280,7 @@ button:hover {
 
 .chain-role {
   display: block;
-  color: #666666;
+  color: #4D4D4D;
   font-size: 13px;
 }
 
@@ -306,7 +301,7 @@ button:hover {
 }
 
 .chain-details dt {
-  color: #666666;
+  color: #4D4D4D;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -334,9 +329,9 @@ button:hover {
 }
 
 .badge.bad {
-  background: #FFF4E6;
-  color: #8A4A00;
-  border-color: #F7941D;
+  background: #F2F2F2;
+  color: #4D4D4D;
+  border-color: #D9D9D9;
 }
 
 .status-pill {
@@ -359,15 +354,15 @@ button:hover {
 
 .status-pill.revoked,
 .status-pill.rejected {
-  background: #FFF4E6;
-  color: #8A4A00;
-  border-color: #F7941D;
+  background: #F2F2F2;
+  color: #4D4D4D;
+  border-color: #D9D9D9;
 }
 
 .status-pill.expired {
-  background: #FFF4E6;
-  color: #8A4A00;
-  border-color: #F7941D;
+  background: #F2F2F2;
+  color: #4D4D4D;
+  border-color: #D9D9D9;
 }
 
 .compact-table {
@@ -395,7 +390,7 @@ button:hover {
 
 .warnings {
   border-color: #F7941D;
-  background: #FFF4E6;
+  background: #F2F2F2;
 }
 
 .section-head {
@@ -426,16 +421,14 @@ button:hover {
 
 .summary-item {
   background: #FFFFFF;
-  border: 1px solid #E2E2E2;
-  border-top: 3px solid #F7941D;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
   padding: 14px;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 4%);
 }
 
 .summary-item span {
   display: block;
-  color: #666666;
+  color: #4D4D4D;
 }
 
 .summary-item strong {
@@ -493,15 +486,15 @@ button:hover {
 }
 
 .state-note.bad {
-  background: #FFF4E6;
-  color: #8A4A00;
+  background: #F2F2F2;
+  color: #4D4D4D;
   border-left: 4px solid #F7941D;
 }
 
 .danger-zone {
   border: 1px solid #F7941D;
   border-radius: 8px;
-  background: #FFF4E6;
+  background: #F2F2F2;
   padding: 14px;
 }
 
@@ -512,7 +505,7 @@ button:hover {
 
 .danger-zone p {
   margin: 0 0 12px;
-  color: #8A4A00;
+  color: #4D4D4D;
 }
 
 .check-list {
@@ -542,9 +535,9 @@ button:hover {
 }
 
 .result-block {
-  border: 1px solid #E2E2E2;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
-  background: #FAFAFA;
+  background: #FFFFFF;
   margin: 0;
   padding: 14px;
 }
@@ -582,7 +575,7 @@ button:hover {
 }
 
 .audit-row td:first-child {
-  border-left: 5px solid #BFBFBF;
+  border-left: 5px solid #D9D9D9;
 }
 
 .audit-row-ok td:first-child {
@@ -603,7 +596,7 @@ button:hover {
 }
 
 .audit-time {
-  color: #666666;
+  color: #4D4D4D;
   white-space: nowrap;
 }
 
@@ -615,14 +608,14 @@ button:hover {
 
 .audit-object-links a,
 .audit-modal a {
-  color: #D86F00;
+  color: #F7941D;
   text-decoration: none;
 }
 
 .link-button {
   border: 0;
   background: transparent;
-  color: #D86F00;
+  color: #F7941D;
   padding: 0;
   cursor: pointer;
   font: inherit;
@@ -681,7 +674,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: #FFFFFF;
-  border: 1px solid #E2E2E2;
+  border: 1px solid #D9D9D9;
 }
 
 th,
@@ -702,7 +695,7 @@ input,
 select {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #D1D1D1;
+  border: 1px solid #D9D9D9;
   border-radius: 6px;
   padding: 9px;
   background: #FFFFFF;
@@ -727,7 +720,6 @@ button {
   color: #FFFFFF;
   padding: 9px 14px;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(247 148 29 / 18%);
 }
 
 .registry-controls {
@@ -813,14 +805,14 @@ button {
 }
 
 .error {
-  background: #FFF4E6;
-  color: #8A4A00;
+  background: #F2F2F2;
+  color: #4D4D4D;
   border-left: 4px solid #F7941D;
 }
 
 .warning {
-  background: #FFF4E6;
-  color: #8A4A00;
+  background: #F2F2F2;
+  color: #4D4D4D;
   border-left: 4px solid #F7941D;
 }
 
@@ -829,7 +821,7 @@ dl {
   grid-template-columns: 180px 1fr;
   gap: 8px 14px;
   background: #FFFFFF;
-  border: 1px solid #E2E2E2;
+  border: 1px solid #D9D9D9;
   border-radius: 8px;
   padding: 16px;
 }
