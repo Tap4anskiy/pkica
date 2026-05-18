@@ -17,8 +17,8 @@
     <p><code>{{ cert.serial_number }}</code></p>
   </div>
   <div class="head-actions">
-    <a class="button-link secondary" href="/certificates">К списку</a>
-    <a class="button-link secondary" href="/verify">Проверить другой</a>
+    <a class="button-link secondary" href="/admin/certificates">К списку</a>
+    <a class="button-link secondary" href="/admin/verify">Проверить другой</a>
   </div>
 </div>
 
@@ -78,7 +78,7 @@
     <div class="danger-zone">
       <h3>Отзыв сертификата</h3>
       <p>Отзыв пометит сертификат как недействительный и добавит его в базу отозванных. После этого опубликуйте CRL.</p>
-      <form class="revoke-form" method="post" action="/certificates/{{ cert.serial_number }}/revoke" onsubmit="return confirm('Отозвать сертификат {{ cert.serial_number }}?')">
+      <form class="revoke-form" method="post" action="/admin/certificates/{{ cert.serial_number }}/revoke" onsubmit="return confirm('Отозвать сертификат {{ cert.serial_number }}?')">
         <label for="revoke-reason">Причина отзыва</label>
         <select id="revoke-reason" name="reason">
           {% for reason in reasons %}
@@ -90,7 +90,7 @@
     </div>
     {% else %}
     <p class="state-note bad">Сертификат уже отозван{% if cert.revoked_at %}: {{ cert.revoked_at|datetime }}{% endif %}.</p>
-    <a class="button-link secondary" href="/crl">Открыть CRL</a>
+    <a class="button-link secondary" href="/admin/crl">Открыть CRL</a>
     {% endif %}
   </aside>
 </section>

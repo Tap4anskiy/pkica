@@ -6,8 +6,8 @@
     <p>Выпуск, просмотр и контроль выданных сертификатов Intermediate CA.</p>
   </div>
   <div class="head-actions">
-    <a class="button-link secondary" href="/requests/new">Новая CSR</a>
-    <a class="button-link secondary" href="/verify">Проверить сертификат</a>
+    <a class="button-link secondary" href="/admin/requests/new">Новая CSR</a>
+    <a class="button-link secondary" href="/admin/verify">Проверить сертификат</a>
   </div>
 </div>
 
@@ -20,7 +20,7 @@
     <label for="issue-by-csr">Из CSR</label>
 
     <div class="issue-mode issue-mode-request">
-      <form class="stack" method="post" action="/certificates/issue/request">
+      <form class="stack" method="post" action="/admin/certificates/issue/request">
         <label>Одобренная заявка
           <select name="request_id" required>
             <option value="" disabled {% if not issue_request_id %}selected{% endif %}>Выберите заявку</option>
@@ -38,7 +38,7 @@
       <div class="mini-list">
         <strong>Одобренные заявки</strong>
         {% for item in approved_requests %}
-        <a href="/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
+        <a href="/admin/requests/{{ item.id }}">#{{ item.id }} · {{ item.cn or item.subject or "-" }} · {{ item.profile }}</a>
         {% endfor %}
       </div>
       {% else %}
@@ -48,7 +48,7 @@
 
     <div class="issue-mode issue-mode-csr">
       <p class="state-note bad">Админский выпуск напрямую из CSR обходит очередь заявок. Используйте его только для ручных операций.</p>
-      <form class="stack" method="post" action="/certificates/issue/csr" onsubmit="return confirm('Выпустить сертификат напрямую из CSR?')">
+      <form class="stack" method="post" action="/admin/certificates/issue/csr" onsubmit="return confirm('Выпустить сертификат напрямую из CSR?')">
         <label>Профиль
           <select name="profile">
             {% for profile in profiles %}
@@ -73,7 +73,7 @@
     <h2>Реестр сертификатов</h2>
     <span class="muted">{{ certificates|length }} отображается</span>
   </div>
-  <form class="registry-controls" method="get" action="/certificates">
+  <form class="registry-controls" method="get" action="/admin/certificates">
     <label class="registry-control registry-control-sort">
       <span>Сортировка</span>
       <select class="registry-select-sort" name="sort">
@@ -114,7 +114,7 @@
         <td>{{ cert.not_valid_before|datetime }}</td>
         <td>{{ cert.not_valid_after|datetime }}</td>
         <td><span class="status-pill {{ cert.display_status }}">{{ cert.display_status }}</span></td>
-        <td><a href="/certificates/{{ cert.serial_number }}">Открыть</a></td>
+        <td><a href="/admin/certificates/{{ cert.serial_number }}">Открыть</a></td>
       </tr>
       {% endfor %}
     </table>

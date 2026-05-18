@@ -282,64 +282,69 @@ def positive_days(value: str, default: int = 365) -> int:
 
 
 @router.get("/", response_class=HTMLResponse)
+def root() -> Response:
+    return RedirectResponse("/trust", status_code=303)
+
+
+@router.get("/admin", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
 
 
-@router.get("/requests", response_class=HTMLResponse)
+@router.get("/admin/requests", response_class=HTMLResponse)
 def requests_list(request: Request, status: str | None = None) -> HTMLResponse:
     return render(request, "requests_list.html", {"requests": list_requests(status), "status_filter": status or ""})
 
 
-@router.get("/requests/new", response_class=HTMLResponse)
+@router.get("/admin/requests/new", response_class=HTMLResponse)
 def request_new(request: Request) -> HTMLResponse:
     return render(request, "request_new.html", {"profile": "server_tls"})
 
 
-@router.post("/requests")
+@router.post("/admin/requests")
 async def request_create(request: Request) -> Response:
     data = await form_data(request)
     try:
         submit_csr_pem(data.get("csr", ""), data.get("profile", ""), source="web")
-        return RedirectResponse("/requests", status_code=303)
+        return RedirectResponse("/admin/requests", status_code=303)
     except Exception as exc:
         return render(request, "request_new.html", {"error": str(exc), "csr": data.get("csr", ""), "profile": data.get("profile", "server_tls")}, 400)
 
 
-@router.get("/requests/{request_id}", response_class=HTMLResponse)
+@router.get("/admin/requests/{request_id}", response_class=HTMLResponse)
 def request_detail(request: Request, request_id: int) -> HTMLResponse:
     return render(request, "request_detail.html", request_detail_context(request_id))
 
 
-@router.post("/requests/{request_id}/approve")
+@router.post("/admin/requests/{request_id}/approve")
 def request_approve(request: Request, request_id: int) -> Response:
     try:
         approve_request(request_id, source="web")
-        return RedirectResponse(f"/requests/{request_id}", status_code=303)
+        return RedirectResponse(f"/admin/requests/{request_id}", status_code=303)
     except Exception as exc:
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
-@router.post("/requests/{request_id}/reject")
+@router.post("/admin/requests/{request_id}/reject")
 async def request_reject(request: Request, request_id: int) -> Response:
     data = await form_data(request)
     try:
         reject_request(request_id, data.get("reason", "Rejected in web UI"), source="web")
-        return RedirectResponse(f"/requests/{request_id}", status_code=303)
+        return RedirectResponse(f"/admin/requests/{request_id}", status_code=303)
     except Exception as exc:
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
-@router.post("/requests/{request_id}/issue")
+@router.post("/admin/requests/{request_id}/issue")
 def request_issue(request: Request, request_id: int) -> Response:
     try:
         record = issue_certificate_from_request(request_id, source="web")
-        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+        return RedirectResponse(f"/admin/certificates/{record['serial_number']}", status_code=303)
     except Exception as exc:
         return render(request, "request_detail.html", request_detail_context(request_id, {"error": str(exc)}), 400)
 
 
-@router.get("/certificates", response_class=HTMLResponse)
+@router.get("/admin/certificates", response_class=HTMLResponse)
 def certificates_list(request: Request, sort: str = "issued_desc", limit: str = "50") -> HTMLResponse:
     return render(
         request,
@@ -353,14 +358,14 @@ def certificates_list(request: Request, sort: str = "issued_desc", limit: str = 
     )
 
 
-@router.post("/certificates/issue/request")
+@router.post("/admin/certificates/issue/request")
 async def certificate_issue_from_request(request: Request) -> Response:
     data = await form_data(request)
     try:
         request_id = int(data.get("request_id", "").strip())
         days = positive_days(data.get("days", "365"))
         record = issue_certificate_from_request(request_id, days=days, source="web")
-        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+        return RedirectResponse(f"/admin/certificates/{record['serial_number']}", status_code=303)
     except Exception as exc:
         return render(
             request,
@@ -376,7 +381,7 @@ async def certificate_issue_from_request(request: Request) -> Response:
         )
 
 
-@router.post("/certificates/issue/csr")
+@router.post("/admin/certificates/issue/csr")
 async def certificate_issue_from_csr(request: Request) -> Response:
     data = await form_data(request)
     csr_pem = data.get("csr", "")
@@ -391,7 +396,7 @@ async def certificate_issue_from_csr(request: Request) -> Response:
             record = issue_certificate_from_csr(temp_path, profile, days=days, source="web")
         finally:
             temp_path.unlink(missing_ok=True)
-        return RedirectResponse(f"/certificates/{record['serial_number']}", status_code=303)
+        return RedirectResponse(f"/admin/certificates/{record['serial_number']}", status_code=303)
     except Exception as exc:
         return render(
             request,
@@ -408,31 +413,31 @@ async def certificate_issue_from_csr(request: Request) -> Response:
         )
 
 
-@router.get("/certificates/{serial}", response_class=HTMLResponse)
+@router.get("/admin/certificates/{serial}", response_class=HTMLResponse)
 def certificate_detail(request: Request, serial: str) -> HTMLResponse:
     return render(request, "certificate_detail.html", certificate_detail_context(serial))
 
 
-@router.post("/certificates/{serial}/revoke")
+@router.post("/admin/certificates/{serial}/revoke")
 async def certificate_revoke(request: Request, serial: str) -> Response:
     data = await form_data(request)
     try:
         revoke_certificate(serial, data.get("reason", "unspecified"), source="web")
-        return RedirectResponse(f"/certificates/{serial}", status_code=303)
+        return RedirectResponse(f"/admin/certificates/{serial}", status_code=303)
     except Exception as exc:
         return render(request, "certificate_detail.html", certificate_detail_context(serial, {"error": str(exc)}), 400)
 
 
-@router.get("/crl", response_class=HTMLResponse)
+@router.get("/admin/crl", response_class=HTMLResponse)
 def crl_page(request: Request) -> HTMLResponse:
     return render(request, "crl.html", {"crl": crl_info()})
 
 
-@router.post("/crl/publish")
+@router.post("/admin/crl/publish")
 def crl_publish(request: Request) -> Response:
     try:
         publish_crl(source="web")
-        return RedirectResponse("/crl", status_code=303)
+        return RedirectResponse("/admin/crl", status_code=303)
     except Exception as exc:
         return render(request, "crl.html", {"crl": crl_info(), "error": str(exc)}, 400)
 
@@ -461,7 +466,7 @@ def trust_download(name: str) -> Response:
     return Response(data, media_type="application/x-pem-file", headers=headers)
 
 
-@router.get("/audit", response_class=HTMLResponse)
+@router.get("/admin/audit", response_class=HTMLResponse)
 def audit_page(
     request: Request,
     limit: int = 100,
@@ -505,12 +510,12 @@ def audit_page(
     )
 
 
-@router.get("/verify", response_class=HTMLResponse)
+@router.get("/admin/verify", response_class=HTMLResponse)
 def verify_page(request: Request) -> HTMLResponse:
     return render(request, "verify.html", {"certificates": certificates_for_select()})
 
 
-@router.post("/verify")
+@router.post("/admin/verify")
 async def verify_submit(request: Request) -> HTMLResponse:
     data = await form_data(request)
     certificates = certificates_for_select()

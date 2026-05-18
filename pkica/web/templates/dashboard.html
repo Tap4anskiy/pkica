@@ -6,16 +6,16 @@
     <p>Обзор состояния УЦ, заявок, сертификатов и списка отзыва.</p>
   </div>
   <div class="head-actions">
-    <a class="button-link" href="/requests/new">Новая CSR</a>
-    <a class="button-link secondary" href="/verify">Проверить сертификат</a>
+    <a class="button-link" href="/admin/requests/new">Новая CSR</a>
+    <a class="button-link secondary" href="/admin/verify">Проверить сертификат</a>
   </div>
 </div>
 
 <section class="metrics-grid">
-  <div class="metric"><span>Ожидают решения</span><strong>{{ status.request_stats.get("pending", 0) }}</strong><a href="/requests?status=pending">Открыть заявки</a></div>
-  <div class="metric"><span>Active</span><strong>{{ status.certificate_stats.get("active", 0) }}</strong><a href="/certificates">Сертификаты</a></div>
-  <div class="metric"><span>Revoked</span><strong>{{ crl.revoked_count }}</strong><a href="/crl">База отзыва</a></div>
-  <div class="metric {{ 'needs-action' if crl.crl_outdated else '' }}"><span>Published</span><strong>{{ crl.published_revoked_count }}</strong><a href="/crl">{{ "Опубликовать CRL" if crl.crl_outdated else "CRL актуален" }}</a></div>
+  <div class="metric"><span>Ожидают решения</span><strong>{{ status.request_stats.get("pending", 0) }}</strong><a href="/admin/requests?status=pending">Открыть заявки</a></div>
+  <div class="metric"><span>Active</span><strong>{{ status.certificate_stats.get("active", 0) }}</strong><a href="/admin/certificates">Сертификаты</a></div>
+  <div class="metric"><span>Revoked</span><strong>{{ crl.revoked_count }}</strong><a href="/admin/crl">База отзыва</a></div>
+  <div class="metric {{ 'needs-action' if crl.crl_outdated else '' }}"><span>Published</span><strong>{{ crl.published_revoked_count }}</strong><a href="/admin/crl">{{ "Опубликовать CRL" if crl.crl_outdated else "CRL актуален" }}</a></div>
 </section>
 
 <section class="dashboard-grid">
@@ -89,7 +89,7 @@
       <dt>Обновлён</dt><dd>{{ crl.last_update|datetime }}</dd>
       <dt>Действует до</dt><dd>{{ crl.next_update|datetime }}</dd>
     </dl>
-    <form method="post" action="/crl/publish" onsubmit="return confirm('Опубликовать новый CRL?')"><button>Опубликовать CRL</button></form>
+    <form method="post" action="/admin/crl/publish" onsubmit="return confirm('Опубликовать новый CRL?')"><button>Опубликовать CRL</button></form>
   </article>
 </section>
 

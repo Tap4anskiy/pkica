@@ -909,7 +909,8 @@ def command_web_start(args: argparse.Namespace) -> int:
             result = run_web_start(args, intermediate_password, action)
 
         print("pkica web started.")
-        print(f"URL:          {result['url']}")
+        print(f"Trust URL:    {result['url']}")
+        print(f"Admin URL:    {result['admin_url']}")
         print(f"PID:          {result['pid']}")
         print(f"Nginx config: {result['nginx_conf']}")
         print_web_certificate_info(result.get("certificate"))

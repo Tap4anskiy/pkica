@@ -207,6 +207,19 @@ def test_certificate_registry_sort_and_limit(monkeypatch: pytest.MonkeyPatch) ->
     assert routes.prepare_certificate_registry("subject_asc", "all")[0]["subject"] == "CN=cert-00"
 
 
+def test_public_and_admin_routes_are_separated() -> None:
+    paths = {route.path for route in routes.router.routes}
+
+    assert routes.root().headers["location"] == "/trust"
+    assert "/trust" in paths
+    assert "/trust/download/{name}" in paths
+    assert "/admin" in paths
+    assert "/admin/certificates" in paths
+    assert "/admin/crl" in paths
+    assert "/certificates" not in paths
+    assert "/crl" not in paths
+
+
 def test_trust_center_reports_fingerprints_and_downloads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     create_test_ca()

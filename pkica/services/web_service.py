@@ -430,6 +430,7 @@ def start_web(
     log_event("web.start", host=host, port=port, pid=running_pid, configure_nginx=configure_nginx)
     return {
         "url": f"https://{host}/",
+        "admin_url": f"https://{host}/admin",
         "pid": running_pid,
         "nginx_conf": str(WEB_NGINX_CONF_PATH),
         "system_nginx": system_nginx,

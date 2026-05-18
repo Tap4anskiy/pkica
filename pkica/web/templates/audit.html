@@ -10,9 +10,9 @@
 <section class="panel">
   <div class="section-head">
     <h2>Фильтры</h2>
-    <a class="button-link secondary" href="/audit">Сбросить</a>
+    <a class="button-link secondary" href="/admin/audit">Сбросить</a>
   </div>
-  <form class="audit-filters" method="get" action="/audit">
+  <form class="audit-filters" method="get" action="/admin/audit">
     <label>Действие
       <select name="action">
         <option value="">Все действия</option>
@@ -79,13 +79,13 @@
         <td>
           <div class="audit-object-links">
             {% if event.serial_number %}
-            <a href="/certificates/{{ event.serial_number }}">Сертификат</a>
+            <a href="/admin/certificates/{{ event.serial_number }}">Сертификат</a>
             {% endif %}
             {% if event.request_id is defined and event.request_id is not none and event.request_id != "" %}
-            <a href="/requests/{{ event.request_id }}">Заявка</a>
+            <a href="/admin/requests/{{ event.request_id }}">Заявка</a>
             {% endif %}
             {% if event.action == "crl.publish" %}
-            <a href="/crl">CRL</a>
+            <a href="/admin/crl">CRL</a>
             {% endif %}
             {% if not event.serial_number and (event.request_id is not defined or event.request_id is none or event.request_id == "") and event.action != "crl.publish" %}
             <span class="muted">-</span>
@@ -126,9 +126,9 @@
       <dt>{{ key }}</dt>
       <dd>
         {% if key == "serial_number" %}
-        <a href="/certificates/{{ value }}"><code>{{ value }}</code></a>
+        <a href="/admin/certificates/{{ value }}"><code>{{ value }}</code></a>
         {% elif key == "request_id" %}
-        <a href="/requests/{{ value }}"><code>{{ value }}</code></a>
+        <a href="/admin/requests/{{ value }}"><code>{{ value }}</code></a>
         {% elif "path" in key or key in ["output", "message"] %}
         <code>{{ value }}</code>
         {% else %}

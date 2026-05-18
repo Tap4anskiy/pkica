@@ -6,14 +6,14 @@
     <p>Отправьте CSR в PEM-формате и выберите профиль будущего сертификата.</p>
   </div>
   <div class="head-actions">
-    <a class="button-link secondary" href="/requests">К заявкам</a>
+    <a class="button-link secondary" href="/admin/requests">К заявкам</a>
   </div>
 </div>
 
 <section class="content-layout">
   <article class="panel content-main">
     <h2>CSR</h2>
-    <form method="post" action="/requests" class="stack">
+    <form method="post" action="/admin/requests" class="stack">
       <label>Профиль
         <select name="profile">
           <option value="server_tls" {% if profile == "server_tls" %}selected{% endif %}>server_tls</option>
