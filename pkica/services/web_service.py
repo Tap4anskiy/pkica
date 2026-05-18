@@ -105,6 +105,21 @@ def web_cert_serial() -> str | None:
         return None
 
 
+def web_certificate_info() -> dict | None:
+    if not WEB_CERT_PATH.exists():
+        return None
+    cert = load_certificate(WEB_CERT_PATH)
+    return {
+        "path": str(WEB_CERT_PATH),
+        "fullchain_path": str(WEB_FULLCHAIN_PATH),
+        "serial_number": format(cert.serial_number, "x"),
+        "subject": cert.subject.rfc4514_string(),
+        "issuer": cert.issuer.rfc4514_string(),
+        "not_valid_before": cert.not_valid_before_utc.isoformat(),
+        "not_valid_after": cert.not_valid_after_utc.isoformat(),
+    }
+
+
 def all_web_certificate_records() -> list[dict]:
     records = load_issued_records(ISSUED_DB_PATH)
     return [
@@ -413,7 +428,13 @@ def start_web(
         encoding="utf-8",
     )
     log_event("web.start", host=host, port=port, pid=running_pid, configure_nginx=configure_nginx)
-    return {"url": f"https://{host}/", "pid": running_pid, "nginx_conf": str(WEB_NGINX_CONF_PATH), "system_nginx": system_nginx}
+    return {
+        "url": f"https://{host}/",
+        "pid": running_pid,
+        "nginx_conf": str(WEB_NGINX_CONF_PATH),
+        "system_nginx": system_nginx,
+        "certificate": web_certificate_info(),
+    }
 
 
 def stop_web() -> dict:
@@ -432,15 +453,11 @@ def stop_web() -> dict:
 
 def web_status() -> dict:
     pid = read_pid()
-    cert_info = None
-    if WEB_CERT_PATH.exists():
-        cert = load_certificate(WEB_CERT_PATH)
-        cert_info = {"path": str(WEB_CERT_PATH), "not_valid_after": cert.not_valid_after_utc.isoformat()}
     state = {}
     if WEB_STATE_PATH.exists():
         state = json.loads(WEB_STATE_PATH.read_text(encoding="utf-8"))
     return {
-        "certificate": cert_info,
+        "certificate": web_certificate_info(),
         "pid": pid,
         "running": bool(pid and is_process_running(pid)),
         "nginx_conf": str(WEB_NGINX_CONF_PATH) if WEB_NGINX_CONF_PATH.exists() else "-",

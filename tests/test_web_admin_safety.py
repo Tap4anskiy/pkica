@@ -34,7 +34,7 @@ from pkica.services import audit_service
 from pkica.services import crl_service
 from pkica.services import trust_service
 from pkica.services.certificate_service import certificate_status_counts
-from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_status
+from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_info, web_certificate_status
 from pkica.web import routes
 from pkica.web.routes import stand_certificate_path
 
@@ -143,6 +143,24 @@ def test_web_certificate_is_registered_and_reused(tmp_path: Path, monkeypatch: p
 
     assert WEB_CERT_PATH.read_bytes() == first_serial
     assert len(load_issued_records(ISSUED_DB_PATH)) == 1
+
+
+def test_web_certificate_info_is_printable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.chdir(tmp_path)
+    create_test_ca()
+    generate_web_certificate("pkica.local")
+
+    info = web_certificate_info()
+    assert info is not None
+    assert info["path"] == "data/web/certs/pkica-web.crt.pem"
+    assert info["fullchain_path"] == "data/web/certs/pkica-web.fullchain.pem"
+
+    cli.print_web_certificate_info(info)
+
+    output = capsys.readouterr().out
+    assert "Web certificate" in output
+    assert "Serial:" in output
+    assert "CN=pkica.local" in output
 
 
 def test_old_revoked_web_record_does_not_block_current_certificate(

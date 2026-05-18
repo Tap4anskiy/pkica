@@ -873,6 +873,22 @@ def run_web_start(args: argparse.Namespace, intermediate_password: str | None, w
     )
 
 
+def print_web_certificate_info(certificate: dict | None) -> None:
+    if not certificate:
+        print("Web certificate: not found")
+        return
+
+    print()
+    print("Web certificate")
+    print(f"Serial:       {certificate.get('serial_number', '-')}")
+    print(f"Subject:      {certificate.get('subject', '-')}")
+    print(f"Issuer:       {certificate.get('issuer', '-')}")
+    print(f"Valid from:   {certificate.get('not_valid_before', '-')}")
+    print(f"Valid until:  {certificate.get('not_valid_after', '-')}")
+    print(f"Cert path:    {certificate.get('path', '-')}")
+    print(f"Fullchain:    {certificate.get('fullchain_path', '-')}")
+
+
 def command_web_start(args: argparse.Namespace) -> int:
     intermediate_password = None
     if args.intermediate_key_encrypted:
@@ -896,6 +912,7 @@ def command_web_start(args: argparse.Namespace) -> int:
         print(f"URL:          {result['url']}")
         print(f"PID:          {result['pid']}")
         print(f"Nginx config: {result['nginx_conf']}")
+        print_web_certificate_info(result.get("certificate"))
         if not args.configure_nginx:
             print()
             print("Manual nginx setup:")
