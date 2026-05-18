@@ -72,8 +72,6 @@
           <dd>{{ artifact.key_usage if artifact.exists else "-" }}</dd>
           <dt>Basic Constraints</dt>
           <dd>{{ artifact.basic_constraints if artifact.exists else "-" }}</dd>
-          <dt>Путь</dt>
-          <dd><code>{{ artifact.path }}</code></dd>
         </dl>
       </section>
       {% endfor %}
@@ -116,8 +114,6 @@
     <dd>{{ trust.crl.entries_count }}</dd>
     <dt>SHA256</dt>
     <dd><code>{{ trust.crl.fingerprint_sha256 }}</code></dd>
-    <dt>Путь</dt>
-    <dd><code>{{ trust.crl.path }}</code></dd>
   </dl>
   {% else %}
   <p class="muted">Опубликованный CRL пока отсутствует.</p>
