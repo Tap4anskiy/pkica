@@ -900,7 +900,6 @@ def print_admin_credentials(credentials: dict | None) -> None:
         print("Save this password now. It will not be shown again.")
     else:
         print("Admin credentials: existing")
-        print(f"Username:     {credentials.get('username', '-')}")
 
 
 def command_web_start(args: argparse.Namespace) -> int:
