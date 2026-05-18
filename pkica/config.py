@@ -49,6 +49,7 @@ WEB_NGINX_CONF_PATH = WEB_NGINX_DIR / "pkica-web.conf"
 WEB_PID_PATH = WEB_RUN_DIR / "pkica-web.pid"
 WEB_LOG_PATH = WEB_LOG_DIR / "web.log"
 WEB_STATE_PATH = WEB_DIR / "web-state.json"
+WEB_AUTH_PATH = WEB_PRIVATE_DIR / "admin-auth.json"
 
 def ensure_ca_directories() -> None:
     """Создаёт рабочие каталоги CA и выставляет приватные права доступа."""
@@ -58,6 +59,7 @@ def ensure_ca_directories() -> None:
         USER_KEYS_DIR,
         DB_DIR,
         BASE_DIR / "audit",
+        WEB_PRIVATE_DIR,
     ]
 
     for path in [

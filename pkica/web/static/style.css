@@ -19,6 +19,16 @@ body {
   text-decoration: none;
 }
 
+.topbar-form {
+  margin-left: auto;
+}
+
+.topbar-form button {
+  border: 1px solid rgb(255 255 255 / 28%);
+  background: transparent;
+  padding: 7px 10px;
+}
+
 main {
   max-width: 1180px;
   margin: 28px auto;
@@ -119,6 +129,35 @@ h2 {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+.login-shell {
+  min-height: calc(100vh - 56px);
+  display: grid;
+  place-items: center;
+}
+
+.login-panel {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+}
+
+.login-panel h1 {
+  font-size: 26px;
+}
+
+.login-panel p {
+  margin: 0;
+}
+
+.login-panel label {
+  font-weight: 700;
+}
+
+.login-panel input {
+  margin-top: 5px;
+  font-weight: 400;
 }
 
 .issue-panel {

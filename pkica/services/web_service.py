@@ -46,6 +46,7 @@ from pkica.pki.verify import verify_certificate_chain
 from pkica.policy.profiles import build_end_entity_extensions, validate_csr_for_profile
 from pkica.storage.revocations import add_revocation, is_revoked
 from pkica.services.audit_service import log_event as audit_log_event
+from pkica.services.auth_service import ensure_admin_credentials
 
 
 SYSTEM_AVAILABLE = Path("/etc/nginx/sites-available/pkica-web.conf")
@@ -399,6 +400,7 @@ def start_web(
     web_cert_action: str = "auto",
 ) -> dict:
     ensure_ca_directories()
+    admin_credentials = ensure_admin_credentials()
     generate_web_certificate(host, intermediate_password=intermediate_password, action=web_cert_action)
     write_nginx_config(host, port)
 
@@ -435,6 +437,7 @@ def start_web(
         "nginx_conf": str(WEB_NGINX_CONF_PATH),
         "system_nginx": system_nginx,
         "certificate": web_certificate_info(),
+        "admin_credentials": admin_credentials,
     }
 
 

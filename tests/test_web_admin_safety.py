@@ -15,6 +15,7 @@ from pkica.config import (
     ROOT_CERT_PATH,
     ROOT_KEY_PATH,
     TRUST_EXPORT_DIR,
+    WEB_AUTH_PATH,
     WEB_CERT_PATH,
 )
 from pkica.pki.ca import (
@@ -31,6 +32,7 @@ from pkica.pki.ca import (
 from pkica.pki.keys import generate_private_key, save_private_key
 from pkica import cli
 from pkica.services import audit_service
+from pkica.services import auth_service
 from pkica.services import crl_service
 from pkica.services import trust_service
 from pkica.services.certificate_service import certificate_status_counts
@@ -108,6 +110,27 @@ def test_audit_sources_have_defaults(tmp_path: Path, monkeypatch: pytest.MonkeyP
     rows = audit_service.list_events()
     assert rows[0]["source"] == "service"
     assert rows[1]["source"] == "cli"
+
+
+def test_admin_credentials_are_generated_and_sessions_are_signed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    created = auth_service.ensure_admin_credentials()
+
+    assert created["generated"] is True
+    assert created["username"].startswith("admin-")
+    assert created["password"]
+    assert WEB_AUTH_PATH.exists()
+    assert created["password"] not in WEB_AUTH_PATH.read_text(encoding="utf-8")
+    assert auth_service.authenticate(created["username"], created["password"]) is True
+    assert auth_service.authenticate(created["username"], "bad-password") is False
+
+    cookie = auth_service.create_session_cookie(created["username"])
+    assert auth_service.verify_session_cookie(cookie) is True
+    assert auth_service.verify_session_cookie(f"{cookie}x") is False
+
+    reused = auth_service.ensure_admin_credentials()
+    assert reused == {"username": created["username"], "password": None, "generated": False}
 
 
 def create_test_ca() -> None:
@@ -214,6 +237,8 @@ def test_public_and_admin_routes_are_separated() -> None:
     assert "/trust" in paths
     assert "/trust/download/{name}" in paths
     assert "/admin" in paths
+    assert "/admin/login" in paths
+    assert "/admin/logout" in paths
     assert "/admin/certificates" in paths
     assert "/admin/crl" in paths
     assert "/certificates" not in paths

@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from pkica.services.audit_service import event_values, list_events
+from pkica.services.auth_service import SESSION_COOKIE, authenticate, create_session_cookie, read_auth_config
 from pkica.services.certificate_service import (
     get_certificate,
     issue_certificate_from_csr,
@@ -289,6 +290,56 @@ def root() -> Response:
 @router.get("/admin", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     return render(request, "dashboard.html", {"status": enrich_dashboard_status(get_status()), "crl": crl_info()})
+
+
+@router.get("/admin/login", response_class=HTMLResponse)
+def admin_login_page(request: Request, next: str = "/admin") -> HTMLResponse:
+    context = {"next": next or "/admin"}
+    if read_auth_config() is None:
+        context["error"] = "Admin credentials are not initialized. Run pkica web start again."
+    return render(request, "admin_login.html", context)
+
+
+@router.post("/admin/login")
+async def admin_login(request: Request) -> Response:
+    data = await form_data(request)
+    username = data.get("username", "")
+    password = data.get("password", "")
+    next_url = data.get("next", "/admin") or "/admin"
+    if not next_url.startswith("/admin") or next_url.startswith("/admin/login"):
+        next_url = "/admin"
+    if read_auth_config() is None:
+        return render(
+            request,
+            "admin_login.html",
+            {"error": "Admin credentials are not initialized. Run pkica web start again.", "next": next_url},
+            503,
+        )
+    if not authenticate(username, password):
+        return render(
+            request,
+            "admin_login.html",
+            {"error": "Invalid username or password.", "next": next_url, "username": username},
+            401,
+        )
+
+    response = RedirectResponse(next_url, status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE,
+        create_session_cookie(username),
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=8 * 60 * 60,
+    )
+    return response
+
+
+@router.post("/admin/logout")
+def admin_logout(request: Request) -> Response:
+    response = RedirectResponse("/admin/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 @router.get("/admin/requests", response_class=HTMLResponse)

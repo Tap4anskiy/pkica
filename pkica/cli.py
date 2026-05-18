@@ -889,6 +889,20 @@ def print_web_certificate_info(certificate: dict | None) -> None:
     print(f"Fullchain:    {certificate.get('fullchain_path', '-')}")
 
 
+def print_admin_credentials(credentials: dict | None) -> None:
+    if not credentials:
+        return
+    print()
+    if credentials.get("generated"):
+        print("Admin credentials generated.")
+        print(f"Username:     {credentials['username']}")
+        print(f"Password:     {credentials['password']}")
+        print("Save this password now. It will not be shown again.")
+    else:
+        print("Admin credentials: existing")
+        print(f"Username:     {credentials.get('username', '-')}")
+
+
 def command_web_start(args: argparse.Namespace) -> int:
     intermediate_password = None
     if args.intermediate_key_encrypted:
@@ -914,6 +928,7 @@ def command_web_start(args: argparse.Namespace) -> int:
         print(f"PID:          {result['pid']}")
         print(f"Nginx config: {result['nginx_conf']}")
         print_web_certificate_info(result.get("certificate"))
+        print_admin_credentials(result.get("admin_credentials"))
         if not args.configure_nginx:
             print()
             print("Manual nginx setup:")
