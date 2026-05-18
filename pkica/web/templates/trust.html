@@ -31,6 +31,10 @@
     <span>CA chain</span>
     <strong><span class="badge {{ 'ok' if trust.chain.exists else 'bad' }}">{{ "готов" if trust.chain.exists else "не готов" }}</span></strong>
   </div>
+  <div class="summary-item">
+    <span>CRL</span>
+    <strong><span class="badge {{ 'ok' if trust.crl.exists else 'bad' }}">{{ "опубликован" if trust.crl.exists else "не опубликован" }}</span></strong>
+  </div>
 </section>
 
 <section class="certificate-layout">
@@ -93,6 +97,33 @@
     <p class="state-note bad">Для сборки цепочки нужны оба CA-сертификата.</p>
     {% endif %}
   </aside>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <h2>CRL</h2>
+    {% if trust.crl.exists %}
+    <a class="button-link secondary" href="{{ trust.crl.download_url }}">Скачать CRL</a>
+    {% endif %}
+  </div>
+  {% if trust.crl.exists %}
+  <dl class="detail-list">
+    <dt>Issuer</dt>
+    <dd>{{ trust.crl.issuer }}</dd>
+    <dt>Last Update</dt>
+    <dd>{{ trust.crl.last_update|datetime }}</dd>
+    <dt>Next Update</dt>
+    <dd>{{ trust.crl.next_update|datetime }}</dd>
+    <dt>Записей</dt>
+    <dd>{{ trust.crl.entries_count }}</dd>
+    <dt>SHA256</dt>
+    <dd><code>{{ trust.crl.fingerprint_sha256 }}</code></dd>
+    <dt>Путь</dt>
+    <dd><code>{{ trust.crl.path }}</code></dd>
+  </dl>
+  {% else %}
+  <p class="muted">Опубликованный CRL пока отсутствует.</p>
+  {% endif %}
 </section>
 
 {% endblock %}

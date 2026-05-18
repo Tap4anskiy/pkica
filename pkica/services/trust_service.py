@@ -6,14 +6,16 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes
 
-from pkica.config import INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH, TRUST_EXPORT_DIR, ensure_ca_directories
+from pkica.config import CRL_PATH, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH, TRUST_EXPORT_DIR, ensure_ca_directories
 from pkica.pki.ca import load_certificate
 from pkica.pki.inspect import get_basic_constraints_text, get_cn, get_key_usage_text
+from pkica.pki.verify import load_crl
 from pkica.storage.export import copy_file, write_chain
 
 TRUST_DOWNLOADS = {
     "root.crt.pem": ROOT_CERT_PATH,
     "intermediate.crt.pem": INTERMEDIATE_CERT_PATH,
+    "intermediate.crl.pem": CRL_PATH,
 }
 
 
@@ -81,6 +83,30 @@ def trust_chain_artifact() -> dict:
     }
 
 
+def crl_artifact() -> dict:
+    artifact = {
+        "role": "crl",
+        "label": "CRL",
+        "path": str(CRL_PATH),
+        "download_name": "intermediate.crl.pem",
+        "download_url": "/trust/download/intermediate.crl.pem",
+        "exists": CRL_PATH.exists(),
+    }
+    if not CRL_PATH.exists():
+        return artifact
+
+    crl = load_crl(CRL_PATH)
+    return {
+        **artifact,
+        "issuer": crl.issuer.rfc4514_string(),
+        "last_update": crl.last_update_utc.isoformat(),
+        "next_update": crl.next_update_utc.isoformat(),
+        "entries_count": len(list(crl)),
+        "fingerprint_sha256": file_sha256(CRL_PATH),
+        "size": CRL_PATH.stat().st_size,
+    }
+
+
 def trust_center_status(expiring_days: int = 90) -> dict:
     root = certificate_artifact("root", "Root CA", ROOT_CERT_PATH, "root.crt.pem")
     intermediate = certificate_artifact(
@@ -90,6 +116,7 @@ def trust_center_status(expiring_days: int = 90) -> dict:
         "intermediate.crt.pem",
     )
     chain = trust_chain_artifact()
+    crl = crl_artifact()
     artifacts = [root, intermediate]
     warnings: list[str] = []
 
@@ -112,6 +139,7 @@ def trust_center_status(expiring_days: int = 90) -> dict:
         "ready": root["exists"] and intermediate["exists"],
         "artifacts": artifacts,
         "chain": chain,
+        "crl": crl,
         "warnings": warnings,
     }
 

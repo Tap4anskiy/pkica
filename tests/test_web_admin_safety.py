@@ -10,6 +10,7 @@ import pytest
 from pkica.config import (
     INTERMEDIATE_CERT_PATH,
     INTERMEDIATE_KEY_PATH,
+    CRL_PATH,
     ISSUED_DB_PATH,
     ROOT_CERT_PATH,
     ROOT_KEY_PATH,
@@ -30,6 +31,7 @@ from pkica.pki.ca import (
 from pkica.pki.keys import generate_private_key, save_private_key
 from pkica import cli
 from pkica.services import audit_service
+from pkica.services import crl_service
 from pkica.services import trust_service
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.web_service import WEB_CERT_PURPOSE, generate_web_certificate, web_certificate_status
@@ -190,6 +192,7 @@ def test_certificate_registry_sort_and_limit(monkeypatch: pytest.MonkeyPatch) ->
 def test_trust_center_reports_fingerprints_and_downloads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     create_test_ca()
+    crl_service.publish_crl()
 
     trust = trust_service.trust_center_status()
 
@@ -197,11 +200,16 @@ def test_trust_center_reports_fingerprints_and_downloads(tmp_path: Path, monkeyp
     assert trust["warnings"] == []
     assert trust["artifacts"][0]["fingerprint_sha256"].count(":") == 31
     assert trust["chain"]["fingerprint_sha256"].count(":") == 31
+    assert trust["crl"]["exists"] is True
+    assert trust["crl"]["fingerprint_sha256"].count(":") == 31
 
     response = routes.trust_download("ca-chain.pem")
     assert response.media_type == "application/x-pem-file"
     assert response.body.startswith(INTERMEDIATE_CERT_PATH.read_bytes())
     assert response.body.endswith(ROOT_CERT_PATH.read_bytes())
+
+    crl_response = routes.trust_download("intermediate.crl.pem")
+    assert crl_response.body == CRL_PATH.read_bytes()
 
 
 def test_export_trust_prints_fingerprints(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
