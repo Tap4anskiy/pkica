@@ -33,7 +33,7 @@ from pkica.services.request_service import (
 from pkica.services.status_service import cert_info, get_status
 from pkica.services.trust_service import TRUST_DOWNLOADS, trust_center_status, trust_chain_bytes
 from pkica.pki.crl import REASON_MAP
-from pkica.config import BASE_DIR, INTERMEDIATE_CERT_PATH, ROOT_CERT_PATH
+from pkica.config import BASE_DIR, INTERMEDIATE_CERT_PATH, ISSUED_DIR, ROOT_CERT_PATH
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
@@ -197,6 +197,26 @@ def stand_certificate_path(value: str) -> Path:
         raise ValueError("Only relative paths inside data/ are allowed.")
 
     return path
+
+
+def verify_selected_certificate(serial: str) -> dict:
+    selected_serial = serial.lower().replace("0x", "")
+    cert = get_certificate(selected_serial)
+    cert_path = Path(cert["cert_path"])
+    result = verify_certificate_path(cert_path, source="web")
+    if result["serial_number"].lower() == selected_serial:
+        return result
+
+    archive_path = ISSUED_DIR / f"{selected_serial}.crt.pem"
+    if archive_path.exists() and archive_path != cert_path:
+        result = verify_certificate_path(archive_path, source="web")
+        if result["serial_number"].lower() == selected_serial:
+            return result
+
+    raise ValueError(
+        "Stored certificate file does not match the selected certificate record. "
+        f"Selected serial: {selected_serial}; file serial: {result['serial_number']}."
+    )
 
 
 def clamp_limit(value: int) -> int:
@@ -595,8 +615,7 @@ async def verify_submit(request: Request) -> HTMLResponse:
     try:
         selected_serial = data.get("serial", "").strip()
         if selected_serial:
-            cert = get_certificate(selected_serial)
-            result = verify_certificate_path(Path(cert["cert_path"]), source="web")
+            result = verify_selected_certificate(selected_serial)
         elif data.get("pem", "").strip():
             result = verify_certificate_pem(data["pem"], source="web")
         else:

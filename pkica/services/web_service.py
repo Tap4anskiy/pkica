@@ -14,6 +14,7 @@ from cryptography.x509.oid import ExtensionOID, NameOID
 
 from pkica.config import (
     BASE_DIR,
+    ISSUED_DIR,
     ISSUED_DB_PATH,
     INTERMEDIATE_CERT_PATH,
     INTERMEDIATE_KEY_PATH,
@@ -143,25 +144,41 @@ def current_web_certificate_records() -> list[dict]:
     ]
 
 
+def web_certificate_archive_paths(serial: str) -> tuple[Path, Path]:
+    return ISSUED_DIR / f"{serial}.crt.pem", ISSUED_DIR / f"{serial}.fullchain.pem"
+
+
+def archive_web_certificate_files(cert) -> tuple[Path, Path]:
+    serial = format(cert.serial_number, "x")
+    cert_path, fullchain_path = web_certificate_archive_paths(serial)
+    cert_path.parent.mkdir(parents=True, exist_ok=True)
+    if not cert_path.exists():
+        shutil.copy2(WEB_CERT_PATH, cert_path)
+    if WEB_FULLCHAIN_PATH.exists() and not fullchain_path.exists():
+        shutil.copy2(WEB_FULLCHAIN_PATH, fullchain_path)
+    return cert_path, fullchain_path
+
+
 def register_web_certificate(cert=None) -> dict | None:
     if not WEB_CERT_PATH.exists():
         return None
 
     cert = cert or load_certificate(WEB_CERT_PATH)
     serial = format(cert.serial_number, "x")
+    cert_path, fullchain_path = archive_web_certificate_files(cert)
     existing = load_issued_records(ISSUED_DB_PATH)
     for record in existing:
         if record.get("serial_number", "").lower() == serial:
             record["purpose"] = WEB_CERT_PURPOSE
-            record["cert_path"] = str(WEB_CERT_PATH)
-            record["fullchain_path"] = str(WEB_FULLCHAIN_PATH)
+            record["cert_path"] = str(cert_path)
+            record["fullchain_path"] = str(fullchain_path)
             save_issued_records(ISSUED_DB_PATH, existing)
             return record
 
-    record = certificate_to_record(cert, WEB_CERT_PROFILE, WEB_CERT_PATH, WEB_FULLCHAIN_PATH)
+    record = certificate_to_record(cert, WEB_CERT_PROFILE, cert_path, fullchain_path)
     record["purpose"] = WEB_CERT_PURPOSE
     append_issued_record(ISSUED_DB_PATH, record)
-    log_event("web.cert.register", cert_path=str(WEB_CERT_PATH), serial_number=serial)
+    log_event("web.cert.register", cert_path=str(cert_path), serial_number=serial)
     return record
 
 

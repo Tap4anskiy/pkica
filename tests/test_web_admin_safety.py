@@ -14,6 +14,7 @@ from pkica.config import (
     INTERMEDIATE_CERT_PATH,
     INTERMEDIATE_KEY_PATH,
     CRL_PATH,
+    ISSUED_DIR,
     ISSUED_DB_PATH,
     REVOKED_DB_PATH,
     ROOT_CERT_PATH,
@@ -175,16 +176,45 @@ def test_web_certificate_is_registered_and_reused(tmp_path: Path, monkeypatch: p
     generate_web_certificate("pkica.local")
     first_serial = WEB_CERT_PATH.read_bytes()
     records = load_issued_records(ISSUED_DB_PATH)
+    serial = records[0]["serial_number"]
 
     assert len(records) == 1
     assert records[0]["purpose"] == WEB_CERT_PURPOSE
-    assert records[0]["cert_path"] == "data/web/certs/pkica-web.crt.pem"
+    assert records[0]["cert_path"] == f"data/issued/{serial}.crt.pem"
+    assert (ISSUED_DIR / f"{serial}.crt.pem").exists()
     assert web_certificate_status("pkica.local")["usable"] is True
 
     generate_web_certificate("pkica.local")
 
     assert WEB_CERT_PATH.read_bytes() == first_serial
     assert len(load_issued_records(ISSUED_DB_PATH)) == 1
+
+
+def test_rotated_web_certificate_records_keep_stable_archived_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    create_test_ca()
+    generate_web_certificate("pkica.local")
+    old_record = load_issued_records(ISSUED_DB_PATH)[0]
+    old_serial = old_record["serial_number"]
+    old_path = Path(old_record["cert_path"])
+
+    generate_web_certificate("pkica.local", action="rotate-key")
+
+    records = load_issued_records(ISSUED_DB_PATH)
+    assert records[0]["serial_number"] == old_serial
+    assert records[0]["status"] == "revoked"
+    assert old_path == ISSUED_DIR / f"{old_serial}.crt.pem"
+    assert old_path.exists()
+    assert format(load_certificate(old_path).serial_number, "x") == old_serial
+    assert routes.verify_selected_certificate(old_serial)["serial_number"] == old_serial
+    assert format(load_certificate(WEB_CERT_PATH).serial_number, "x") != old_serial
+
+    records[0]["cert_path"] = str(WEB_CERT_PATH)
+    save_issued_records(ISSUED_DB_PATH, records)
+    assert routes.verify_selected_certificate(old_serial)["serial_number"] == old_serial
 
 
 def test_web_reset_revokes_certificate_and_removes_web_data(
