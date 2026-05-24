@@ -69,7 +69,7 @@ from pkica.storage.export import copy_file
 from pkica.services.certificate_service import certificate_status_counts
 from pkica.services.crl_service import crl_info
 from pkica.services.trust_service import export_trust_bundle
-from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, start_web, stop_web, web_status
+from pkica.services.web_service import WebCertificateActionRequired, cleanup_web_artifacts, reset_web_interface, start_web, stop_web, web_status
 
 
 def append_cli_audit(event: dict) -> None:
@@ -971,6 +971,32 @@ def command_web_status(args: argparse.Namespace) -> int:
     print(f"System nginx:    {'configured by pkica' if status['system_nginx_configured'] else 'not configured by pkica'}")
     return 0
 
+
+def command_web_reset(args: argparse.Namespace) -> int:
+    if not args.force:
+        confirm = input(
+            "This will STOP the web interface, REVOKE its certificate, and DELETE all web data.\n"
+            "Type 'yes' to continue: "
+        )
+        if confirm.strip().lower() != "yes":
+            print("Aborted.")
+            return 1
+
+    try:
+        result = reset_web_interface(reason=args.reason)
+        print("pkica web reset successfully.")
+        print(f"Web certificate revoked: {result['revoked_count']}")
+        print(f"Revocation reason:       {result['reason']}")
+        print(f"Web data removed:        {'yes' if result['web_dir_removed'] else 'not found'}")
+        print(f"FastAPI stopped:         {'yes' if result['stopped'] else 'not running'}")
+        if result.get("system_nginx_removed"):
+            print("System nginx config:     removed")
+        return 0
+    except Exception as exc:
+        print(f"Error: {exc}")
+        return 1
+
+
 def command_export_trust(args: argparse.Namespace) -> int:
     try:
         exported = export_trust_bundle()
@@ -1269,6 +1295,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     web_status_parser = web_subparsers.add_parser("status", help="Show web interface status")
     web_status_parser.set_defaults(func=command_web_status)
+
+    web_reset = web_subparsers.add_parser("reset", help="Reset web interface data and revoke web certificates")
+    web_reset.add_argument(
+        "--force",
+        action="store_true",
+        help="Do not ask for confirmation",
+    )
+    web_reset.add_argument(
+        "--reason",
+        choices=list(REASON_MAP.keys()),
+        default="cessationOfOperation",
+        help="Revocation reason for web certificates",
+    )
+    web_reset.set_defaults(func=command_web_reset)
 
     return parser
 

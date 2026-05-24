@@ -15,11 +15,13 @@ from pkica.config import (
     INTERMEDIATE_KEY_PATH,
     CRL_PATH,
     ISSUED_DB_PATH,
+    REVOKED_DB_PATH,
     ROOT_CERT_PATH,
     ROOT_KEY_PATH,
     TRUST_EXPORT_DIR,
     WEB_AUTH_PATH,
     WEB_CERT_PATH,
+    WEB_DIR,
 )
 from pkica.pki.ca import (
     certificate_to_record,
@@ -183,6 +185,34 @@ def test_web_certificate_is_registered_and_reused(tmp_path: Path, monkeypatch: p
 
     assert WEB_CERT_PATH.read_bytes() == first_serial
     assert len(load_issued_records(ISSUED_DB_PATH)) == 1
+
+
+def test_web_reset_revokes_certificate_and_removes_web_data(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    create_test_ca()
+    generate_web_certificate("pkica.local")
+    auth_service.ensure_admin_credentials()
+
+    assert WEB_CERT_PATH.exists()
+    assert WEB_AUTH_PATH.exists()
+    assert cli.command_web_reset(argparse.Namespace(force=True, reason="cessationOfOperation")) == 0
+
+    output = capsys.readouterr().out
+    assert "pkica web reset successfully." in output
+    assert "Web certificate revoked: 1" in output
+    assert not WEB_DIR.exists()
+
+    issued = load_issued_records(ISSUED_DB_PATH)
+    assert issued[0]["status"] == "revoked"
+    assert issued[0]["revocation_reason"] == "cessationOfOperation"
+
+    revoked = json.loads(REVOKED_DB_PATH.read_text(encoding="utf-8"))
+    assert revoked[0]["serial_number"] == issued[0]["serial_number"]
+    assert revoked[0]["reason"] == "cessationOfOperation"
 
 
 def test_web_certificate_info_is_printable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

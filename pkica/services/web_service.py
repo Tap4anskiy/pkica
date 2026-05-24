@@ -469,16 +469,62 @@ def web_status() -> dict:
     }
 
 
+def remove_system_nginx_if_configured(state: dict) -> bool:
+    if not state.get("system_nginx_configured"):
+        return False
+
+    removed = False
+    if SYSTEM_ENABLED.is_symlink() and SYSTEM_ENABLED.resolve() == SYSTEM_AVAILABLE:
+        SYSTEM_ENABLED.unlink(missing_ok=True)
+        removed = True
+    if SYSTEM_AVAILABLE.exists():
+        SYSTEM_AVAILABLE.unlink(missing_ok=True)
+        removed = True
+    return removed
+
+
+def load_web_state() -> dict:
+    if WEB_STATE_PATH.exists():
+        return json.loads(WEB_STATE_PATH.read_text(encoding="utf-8"))
+    return {}
+
+
 def cleanup_web_artifacts() -> None:
     stop_web()
-    state = {}
-    if WEB_STATE_PATH.exists():
-        state = json.loads(WEB_STATE_PATH.read_text(encoding="utf-8"))
-    if state.get("system_nginx_configured"):
-        if SYSTEM_ENABLED.is_symlink() and SYSTEM_ENABLED.resolve() == SYSTEM_AVAILABLE:
-            SYSTEM_ENABLED.unlink(missing_ok=True)
-        if SYSTEM_AVAILABLE.exists():
-            SYSTEM_AVAILABLE.unlink(missing_ok=True)
+    state = load_web_state()
+    remove_system_nginx_if_configured(state)
     if BASE_DIR.joinpath("web").exists():
         shutil.rmtree(BASE_DIR / "web")
     log_event("web.cleanup", result="success")
+
+
+def reset_web_interface(reason: str = "cessationOfOperation") -> dict:
+    ensure_ca_directories()
+    state = load_web_state()
+    stop_result = stop_web()
+
+    if WEB_CERT_PATH.exists() and not current_web_certificate_records():
+        register_web_certificate()
+
+    records_to_revoke = [
+        record
+        for record in all_web_certificate_records()
+        if record.get("status") != "revoked"
+    ]
+    revoke_web_certificates(reason=reason)
+
+    system_nginx_removed = remove_system_nginx_if_configured(state)
+    web_dir_existed = BASE_DIR.joinpath("web").exists()
+    if web_dir_existed:
+        shutil.rmtree(BASE_DIR / "web")
+
+    result = {
+        "stopped": stop_result.get("stopped", False),
+        "pid": stop_result.get("pid"),
+        "revoked_count": len(records_to_revoke),
+        "reason": reason,
+        "web_dir_removed": web_dir_existed,
+        "system_nginx_removed": system_nginx_removed,
+    }
+    log_event("web.reset", **result)
+    return result
